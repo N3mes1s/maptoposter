@@ -28,8 +28,9 @@ maptoposter/
 │   └── workers/                # Background job processing (placeholder)
 ├── src/maptoposter/            # Core library (refactored modules)
 │   ├── __init__.py
-│   ├── config.py               # Centralized settings with env vars
-│   ├── exceptions.py           # Custom exception classes
+│   ├── config.py               # Centralized settings with env vars and validation
+│   ├── exceptions.py           # Custom exception classes with details
+│   ├── logging_config.py       # Logging setup and configuration
 │   ├── core/
 │   │   ├── geocoding.py        # Nominatim geocoding functions
 │   │   └── poster_generator.py # PosterGenerator class, PosterRequest
@@ -39,6 +40,12 @@ maptoposter/
 │   │   └── typography.py       # Font loading and text rendering
 │   └── themes/
 │       └── loader.py           # Theme JSON loading utilities
+├── tests/                      # Pytest test suite
+│   ├── conftest.py             # Shared fixtures
+│   ├── test_config.py          # Configuration tests
+│   ├── test_exceptions.py      # Exception tests
+│   ├── test_themes.py          # Theme loading tests
+│   └── test_poster_generator.py # Generator tests
 ├── frontend/                   # Web UI
 │   ├── index.html              # Main HTML page
 │   ├── css/styles.css          # Styling
@@ -214,7 +221,8 @@ uv sync --all-extras
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Serve frontend |
-| `GET` | `/health` | Health check |
+| `GET` | `/health` | Basic health check |
+| `GET` | `/health/ready` | Readiness check (verifies themes, fonts, directories) |
 | `GET` | `/api/docs` | OpenAPI documentation |
 | `GET` | `/api/themes` | List all themes |
 | `GET` | `/api/themes/{name}` | Get theme details |
@@ -323,8 +331,14 @@ class GenerationProgress:
 Copy `.env.example` to `.env` and customize:
 
 ```bash
-# Redis URL (for production job queue)
+# API settings
+API_HOST=0.0.0.0
+API_PORT=8000
 REDIS_URL=redis://localhost:6379
+
+# CORS settings
+CORS_ORIGINS=*                    # Or comma-separated: http://localhost:3000,https://example.com
+CORS_ALLOW_CREDENTIALS=false
 
 # Map generation settings
 MAX_DISTANCE=50000
@@ -336,9 +350,21 @@ DEFAULT_THEME=feature_based
 NOMINATIM_DELAY=1.0
 OSM_DELAY=0.5
 
+# Timeout settings (seconds)
+NOMINATIM_TIMEOUT=10.0
+OSM_TIMEOUT=60.0
+
 # Output settings
 OUTPUT_DPI=300
 PREVIEW_DPI=72
+
+# Job settings
+JOB_TTL_HOURS=24
+MAX_CONCURRENT_JOBS=5
+
+# Logging
+LOG_LEVEL=INFO                    # DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_JSON=false                    # Set to true for production
 ```
 
 ## Theme System
@@ -397,14 +423,32 @@ PREVIEW_DPI=72
 
 ```python
 # Custom exceptions in src/maptoposter/exceptions.py
-class GeocodingError(Exception): pass
-class ThemeNotFoundError(Exception): pass
-class DataFetchError(Exception): pass
+# All exceptions include message and details dict
 
-# Graceful degradation for optional features
+class MapToPosterError(Exception):       # Base class
+    def __init__(self, message: str, details: Optional[dict] = None)
+
+class GeocodingError(MapToPosterError):  # Failed to geocode location
+    def __init__(self, city: str, country: str, reason: str = "Location not found")
+
+class ThemeNotFoundError(MapToPosterError):  # Theme doesn't exist
+    def __init__(self, theme_name: str, available_themes: Optional[list] = None)
+
+class DataFetchError(MapToPosterError):  # Failed to fetch OSM data
+    def __init__(self, data_type: str, reason: str = "Unknown error")
+
+class InvalidDistanceError(MapToPosterError):  # Distance out of range
+    def __init__(self, distance: int, min_distance: int, max_distance: int)
+
+class InvalidInputError(MapToPosterError):  # Invalid user input
+class APITimeoutError(MapToPosterError):    # External API timeout
+class PartialDataWarning(MapToPosterError): # Non-fatal, generation continues
+
+# Graceful degradation for optional features (water, parks)
 try:
     water = ox.features_from_point(point, tags={...}, dist=dist)
-except Exception:
+except Exception as e:
+    logger.warning(f"Could not fetch water features: {e}")
     water = None  # Render without water layer
 ```
 
@@ -506,20 +550,41 @@ y=0.02   Attribution (bottom-right)
 ## Testing
 
 ```bash
-# Run pytest (with dev deps installed)
+# Run pytest test suite (41 tests)
 uv run pytest
 
-# API tests (requires running server on port 8002)
+# Run with verbose output
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_config.py
+
+# Run with coverage
+uv run pytest --cov=src/maptoposter
+
+# API integration tests (requires running server on port 8002)
 uv run python test_api.py
 
 # Quick manual test with small distance
 uv run python cli.py -c "Venice" -C "Italy" -t blueprint -d 4000
 ```
 
+### Test Suite Structure
+
+```
+tests/
+├── conftest.py             # Shared fixtures (sample_theme, coordinates, paths)
+├── test_config.py          # Settings validation, distance bounds, filename sanitization
+├── test_exceptions.py      # Exception class behavior and messages
+├── test_themes.py          # Theme loading, validation, file integrity
+└── test_poster_generator.py # PosterRequest validation, graceful degradation
+```
+
 ### Test Coverage
 
-- `test_api.py`: Health, themes, frontend, API docs, poster generation
-- `test_generation.py`: Direct poster generation without API
+- **Unit tests** (`tests/`): Config, exceptions, themes, poster generation
+- **Integration tests** (`test_api.py`): Health, themes, frontend, API docs, poster generation
+- **Manual tests** (`test_generation.py`): Direct poster generation without API
 
 ## Output Format
 
@@ -532,16 +597,20 @@ uv run python cli.py -c "Venice" -C "Italy" -t blueprint -d 4000
 
 1. **Use UV for all Python operations**: Always use `uv run`, `uv add`, `uv sync`
 2. **Lock file is committed**: `uv.lock` should be committed to version control
-3. **Dual architecture**: Both legacy single-file (`create_map_poster.py`) and modular (`src/maptoposter/`) exist
-4. **Prefer modular code**: New features should use the modular structure
-5. **API uses background tasks**: Poster generation is async via FastAPI BackgroundTasks
-6. **In-memory job storage**: Current implementation stores jobs in dict; Redis support is scaffolded
-7. **Theme validation**: Themes must exist in `themes/` directory before use
-8. **Fonts required**: Roboto fonts must be present in `fonts/` directory
-9. **API rate limits**: Nominatim has strict rate limits (1 req/sec)
-10. **Graceful degradation**: Missing water/parks features don't crash the app
-11. **CORS enabled**: API allows all origins (configure for production)
-12. **Static files**: Generated posters served from `static/` directory
+3. **Run tests after changes**: `uv run pytest` - 41 tests should pass
+4. **Dual architecture**: Both legacy single-file (`create_map_poster.py`) and modular (`src/maptoposter/`) exist
+5. **Prefer modular code**: New features should use the modular structure
+6. **Use proper logging**: Import `from src.maptoposter.logging_config import get_logger`
+7. **Use custom exceptions**: Import from `src.maptoposter.exceptions` for specific error types
+8. **Validate inputs**: Use `settings.validate_distance()` and `settings.sanitize_filename()`
+9. **API uses background tasks**: Poster generation is async via FastAPI BackgroundTasks
+10. **In-memory job storage**: Current implementation stores jobs in dict; Redis support is scaffolded
+11. **Theme validation**: Themes must exist in `themes/` directory before use
+12. **Fonts required**: Roboto fonts must be present in `fonts/` directory
+13. **API rate limits**: Nominatim has strict rate limits (1 req/sec)
+14. **Graceful degradation**: Missing water/parks features log warnings but don't crash
+15. **CORS configurable**: Set `CORS_ORIGINS` env var for production
+16. **Static files**: Generated posters served from `static/` directory
 
 ## File Modification Guidelines
 
