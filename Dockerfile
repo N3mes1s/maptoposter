@@ -1,7 +1,5 @@
-# MapToPoster Online Generator
-# Multi-stage Dockerfile for API and Worker
-
-FROM python:3.11-slim as base
+# MapToPoster API - Production Dockerfile
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -10,23 +8,29 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libgeos-dev \
     libproj-dev \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
+# Copy requirements first for better caching
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Create directories
+# Create necessary directories
 RUN mkdir -p /app/static /app/posters
 
-# API server stage
-FROM base as api
-EXPOSE 8000
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set PYTHONPATH for src.maptoposter imports
+ENV PYTHONPATH=/app
 
-# Development stage with hot reload
-FROM base as dev
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Default port (Railway overrides via $PORT)
+ENV PORT=8000
+
+EXPOSE ${PORT}
+
+# Use shell form to allow $PORT expansion
+CMD python -m uvicorn api.main:app --host 0.0.0.0 --port $PORT
