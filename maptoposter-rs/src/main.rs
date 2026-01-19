@@ -57,6 +57,8 @@ async fn main() {
         .route("/api/posters/:job_id", get(api::handlers::posters::get_poster_status))
         .route("/api/posters/:job_id/download", get(api::handlers::posters::download_poster))
         .route("/api/posters/:job_id/stream", get(api::handlers::jobs::stream_progress))
+        // Also support /api/jobs path for frontend compatibility
+        .route("/api/jobs/:job_id/stream", get(api::handlers::jobs::stream_progress))
         // Static files for generated posters
         .nest_service("/static", ServeDir::new(&config.static_dir))
         // Serve frontend
