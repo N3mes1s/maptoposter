@@ -9,7 +9,8 @@ class Settings:
     """Application settings with environment variable support."""
 
     def __init__(self):
-        self.BASE_DIR = Path(__file__).parent.parent.parent.parent
+        # config.py is at src/maptoposter/config.py, so go up 3 levels
+        self.BASE_DIR = Path(__file__).parent.parent.parent
         self.THEMES_DIR = self.BASE_DIR / "themes"
         self.FONTS_DIR = self.BASE_DIR / "fonts"
         self.STATIC_DIR = self.BASE_DIR / "static"
