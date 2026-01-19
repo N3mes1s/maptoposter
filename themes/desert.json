@@ -1,0 +1,15 @@
+{
+  "name": "Desert",
+  "description": "Warm sandy desert tones - earthy and minimal",
+  "bg": "#F5E6D3",
+  "text": "#6B4423",
+  "gradient_color": "#F5E6D3",
+  "water": "#D4C4A8",
+  "parks": "#E8DCC4",
+  "road_motorway": "#8B5A2B",
+  "road_primary": "#A67C52",
+  "road_secondary": "#BC9A6C",
+  "road_tertiary": "#D2B78A",
+  "road_residential": "#E0CAA4",
+  "road_default": "#BC9A6C"
+}

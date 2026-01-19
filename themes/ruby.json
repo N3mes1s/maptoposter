@@ -1,0 +1,15 @@
+{
+  "name": "Ruby",
+  "description": "Deep ruby red tones - bold and luxurious",
+  "bg": "#1A0808",
+  "text": "#FF4444",
+  "gradient_color": "#1A0808",
+  "water": "#2A0A0A",
+  "parks": "#240C0C",
+  "road_motorway": "#DC143C",
+  "road_primary": "#B22234",
+  "road_secondary": "#8B1A2C",
+  "road_tertiary": "#6B1422",
+  "road_residential": "#4A0E18",
+  "road_default": "#8B1A2C"
+}

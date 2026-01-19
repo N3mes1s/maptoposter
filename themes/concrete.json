@@ -1,0 +1,15 @@
+{
+  "name": "Concrete",
+  "description": "Urban concrete grays - industrial minimalism",
+  "bg": "#E8E8E8",
+  "text": "#2C2C2C",
+  "gradient_color": "#E8E8E8",
+  "water": "#C4C4C4",
+  "parks": "#D8D8D8",
+  "road_motorway": "#3C3C3C",
+  "road_primary": "#545454",
+  "road_secondary": "#6C6C6C",
+  "road_tertiary": "#888888",
+  "road_residential": "#A0A0A0",
+  "road_default": "#6C6C6C"
+}

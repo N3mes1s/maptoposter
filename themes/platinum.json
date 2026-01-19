@@ -1,0 +1,15 @@
+{
+  "name": "Platinum",
+  "description": "Silver platinum on charcoal - sleek and modern",
+  "bg": "#1C1C1C",
+  "text": "#E5E4E2",
+  "gradient_color": "#1C1C1C",
+  "water": "#282828",
+  "parks": "#242424",
+  "road_motorway": "#E5E4E2",
+  "road_primary": "#C0C0C0",
+  "road_secondary": "#A8A8A8",
+  "road_tertiary": "#808080",
+  "road_residential": "#585858",
+  "road_default": "#A8A8A8"
+}

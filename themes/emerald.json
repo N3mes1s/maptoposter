@@ -1,0 +1,15 @@
+{
+  "name": "Emerald",
+  "description": "Rich emerald greens - jewel-toned elegance",
+  "bg": "#081A10",
+  "text": "#50C878",
+  "gradient_color": "#081A10",
+  "water": "#0A2A14",
+  "parks": "#0C2418",
+  "road_motorway": "#50C878",
+  "road_primary": "#3CB371",
+  "road_secondary": "#2E8B57",
+  "road_tertiary": "#246B46",
+  "road_residential": "#1A5035",
+  "road_default": "#2E8B57"
+}

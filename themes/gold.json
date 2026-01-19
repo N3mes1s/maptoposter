@@ -1,0 +1,15 @@
+{
+  "name": "Gold",
+  "description": "Luxurious gold on black - premium elegance",
+  "bg": "#0A0A08",
+  "text": "#FFD700",
+  "gradient_color": "#0A0A08",
+  "water": "#141410",
+  "parks": "#1A1A14",
+  "road_motorway": "#FFD700",
+  "road_primary": "#DAA520",
+  "road_secondary": "#B8860B",
+  "road_tertiary": "#8B6914",
+  "road_residential": "#5C4A10",
+  "road_default": "#B8860B"
+}
