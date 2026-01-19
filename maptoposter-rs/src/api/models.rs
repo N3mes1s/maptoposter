@@ -27,6 +27,12 @@ pub struct PosterCreateResponse {
     pub estimated_time: u32,
 }
 
+/// Request to re-render a poster with a different theme
+#[derive(Debug, Deserialize)]
+pub struct ReRenderRequest {
+    pub theme: String,
+}
+
 /// Job status response
 #[derive(Debug, Clone, Serialize)]
 pub struct JobStatusResponse {

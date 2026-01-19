@@ -13,8 +13,8 @@ use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
-use crate::api::models::{JobStatus, JobStatusResponse, PosterCreateRequest, PosterCreateResponse};
-use crate::api::state::{AppState, JobRequest};
+use crate::api::models::{JobStatus, JobStatusResponse, PosterCreateRequest, PosterCreateResponse, ReRenderRequest};
+use crate::api::state::{AppState, CachedMapData, JobRequest};
 use crate::config::Settings;
 use crate::core::poster_generator::{PosterGenerator, PosterRequest};
 use crate::core::progress::GenerationProgress;
@@ -121,12 +121,24 @@ async fn process_poster_job(state: Arc<AppState>, job_id: Uuid, request: JobRequ
         );
     });
 
-    // Generate poster
+    // Generate poster and cache map data
     match generator
-        .generate(&poster_request, &output_path, Some(progress_callback))
+        .generate_with_cache(&poster_request, &output_path, Some(progress_callback))
         .await
     {
-        Ok(()) => {
+        Ok(map_data) => {
+            // Cache map data for re-rendering
+            let cached_data = CachedMapData {
+                city: map_data.city,
+                country: map_data.country,
+                lat: map_data.lat,
+                lon: map_data.lon,
+                distance: map_data.distance,
+                streets: map_data.streets,
+                water: map_data.water,
+                parks: map_data.parks,
+            };
+            state.cache_map_data(job_id, cached_data);
             state.complete_job(job_id, output_path.to_string_lossy().to_string());
         }
         Err(e) => {
@@ -194,6 +206,137 @@ pub async fn download_poster(
         )
         .body(body)
         .unwrap())
+}
+
+/// Re-render a poster with a different theme using cached map data
+pub async fn rerender_poster(
+    State(state): State<Arc<AppState>>,
+    Path(job_id): Path<String>,
+    Json(request): Json<ReRenderRequest>,
+) -> Result<Json<PosterCreateResponse>> {
+    let uuid = Uuid::parse_str(&job_id).map_err(|_| AppError::JobNotFound(job_id.clone()))?;
+
+    // Get cached map data
+    let cached_data = state
+        .get_cached_map_data(uuid)
+        .ok_or_else(|| AppError::Internal("No cached data available for this job".to_string()))?;
+
+    // Validate theme exists
+    if load_theme(&state.config.themes_dir, &request.theme).is_none() {
+        return Err(AppError::ThemeNotFound(request.theme.clone()));
+    }
+
+    // Create new job for re-render
+    let job_request = JobRequest {
+        city: cached_data.city.clone(),
+        country: cached_data.country.clone(),
+        theme: request.theme.clone(),
+        distance: cached_data.distance,
+    };
+
+    let new_job = state.create_job(job_request);
+    let new_job_id = new_job.id;
+
+    // Copy cached data to new job
+    state.cache_map_data(new_job_id, cached_data.clone());
+
+    // Spawn background task for re-rendering
+    let state_clone = state.clone();
+    let theme_name = request.theme.clone();
+    tokio::spawn(async move {
+        let result = AssertUnwindSafe(process_rerender_job(
+            state_clone.clone(),
+            new_job_id,
+            theme_name,
+            cached_data,
+        ))
+        .catch_unwind()
+        .await;
+
+        if result.is_err() {
+            tracing::error!("Re-render job {} panicked", new_job_id);
+            state_clone.fail_job(new_job_id, "Internal error: re-render crashed".to_string());
+        }
+    });
+
+    Ok(Json(PosterCreateResponse {
+        job_id: new_job_id.to_string(),
+        status: "queued".to_string(),
+        estimated_time: 5, // Re-render is much faster
+    }))
+}
+
+/// Process a re-render job using cached data
+async fn process_rerender_job(
+    state: Arc<AppState>,
+    job_id: Uuid,
+    theme_name: String,
+    cached_data: CachedMapData,
+) {
+    use crate::core::geocoding::format_coordinates;
+
+    state.update_job_status(job_id, JobStatus::Processing);
+
+    // Load theme
+    let theme = match load_theme(&state.config.themes_dir, &theme_name) {
+        Some(t) => t,
+        None => {
+            state.fail_job(job_id, format!("Theme '{}' not found", theme_name));
+            return;
+        }
+    };
+
+    // Create generator
+    let generator = match PosterGenerator::new(
+        theme,
+        &state.config.fonts_dir,
+        state.config.nominatim_timeout,
+        state.config.osm_timeout,
+    ) {
+        Ok(g) => g,
+        Err(e) => {
+            state.fail_job(job_id, format!("Failed to create generator: {}", e));
+            return;
+        }
+    };
+
+    // Output path
+    let output_path = state.config.static_dir.join(format!("{}.png", job_id));
+
+    // Create progress callback
+    let state_clone = state.clone();
+    let progress_callback = Box::new(move |progress: crate::core::progress::GenerationProgress| {
+        state_clone.update_job_progress(
+            job_id,
+            progress.progress,
+            Some(progress.step),
+            Some(progress.message),
+        );
+    });
+
+    // Convert cached data to MapData for rendering
+    let map_data = crate::core::poster_generator::MapData {
+        city: cached_data.city,
+        country: cached_data.country,
+        lat: cached_data.lat,
+        lon: cached_data.lon,
+        distance: cached_data.distance,
+        streets: cached_data.streets,
+        water: cached_data.water,
+        parks: cached_data.parks,
+    };
+
+    let coordinates = format_coordinates(map_data.lat, map_data.lon);
+
+    // Render using cached data (no network requests!)
+    match generator.render_from_data(&map_data, &coordinates, &output_path, Some(progress_callback)) {
+        Ok(()) => {
+            state.complete_job(job_id, output_path.to_string_lossy().to_string());
+        }
+        Err(e) => {
+            state.fail_job(job_id, e.to_string());
+        }
+    }
 }
 
 /// Estimate generation time in seconds based on distance

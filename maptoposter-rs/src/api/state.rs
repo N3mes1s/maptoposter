@@ -7,7 +7,21 @@ use uuid::Uuid;
 
 use crate::api::models::{JobStatus, JobStatusResponse};
 use crate::config::Settings;
+use crate::core::osm_client::{AreaFeature, RoadSegment};
 use crate::core::rate_limiter::{ApiRateLimiters, Cache};
+
+/// Cached map data for re-rendering with different themes
+#[derive(Debug, Clone)]
+pub struct CachedMapData {
+    pub city: String,
+    pub country: String,
+    pub lat: f64,
+    pub lon: f64,
+    pub distance: u32,
+    pub streets: Vec<RoadSegment>,
+    pub water: Vec<AreaFeature>,
+    pub parks: Vec<AreaFeature>,
+}
 
 /// Internal job state
 #[derive(Debug, Clone)]
@@ -92,6 +106,8 @@ pub struct AppState {
     pub rate_limiters: ApiRateLimiters,
     /// Cache for geocoding results (city,country -> coordinates)
     pub geocoding_cache: Cache<GeocodingResult>,
+    /// Cache for map data (job_id -> map data) for re-rendering
+    pub map_data_cache: RwLock<HashMap<Uuid, CachedMapData>>,
 }
 
 impl AppState {
@@ -114,6 +130,7 @@ impl AppState {
             job_receiver: RwLock::new(Some(rx)),
             rate_limiters,
             geocoding_cache,
+            map_data_cache: RwLock::new(HashMap::new()),
         }
     }
 
@@ -186,8 +203,39 @@ impl AppState {
         let ttl_hours = self.config.job_ttl_hours as i64;
         let cutoff = Utc::now() - chrono::Duration::hours(ttl_hours);
 
-        self.jobs.write().retain(|_, job| {
-            job.created_at > cutoff
-        });
+        // Collect IDs to remove
+        let removed_ids: Vec<Uuid> = {
+            let jobs = self.jobs.read();
+            jobs.iter()
+                .filter(|(_, job)| job.created_at <= cutoff)
+                .map(|(id, _)| *id)
+                .collect()
+        };
+
+        // Remove jobs
+        {
+            let mut jobs = self.jobs.write();
+            for id in &removed_ids {
+                jobs.remove(id);
+            }
+        }
+
+        // Also clean up cached map data for removed jobs
+        {
+            let mut cache = self.map_data_cache.write();
+            for id in removed_ids {
+                cache.remove(&id);
+            }
+        }
+    }
+
+    /// Store cached map data for a job
+    pub fn cache_map_data(&self, job_id: Uuid, data: CachedMapData) {
+        self.map_data_cache.write().insert(job_id, data);
+    }
+
+    /// Get cached map data for a job
+    pub fn get_cached_map_data(&self, job_id: Uuid) -> Option<CachedMapData> {
+        self.map_data_cache.read().get(&job_id).cloned()
     }
 }

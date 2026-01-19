@@ -784,6 +784,34 @@ body {
     background: var(--color-bg-card);
 }
 
+.action-btn.accent {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    border: none;
+}
+
+.action-btn.accent:hover {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    transform: translateY(-1px);
+}
+
+/* Theme selector highlight for re-render */
+.theme-selector.highlight-for-rerender {
+    animation: pulse-border 1s infinite;
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+}
+
+@keyframes pulse-border {
+    0%, 100% {
+        box-shadow: 0 0 0 2px var(--color-accent);
+    }
+    50% {
+        box-shadow: 0 0 0 4px var(--color-accent), 0 0 20px var(--color-accent-glow);
+    }
+}
+
 /* ===================================
    Progress Overlay
    =================================== */
