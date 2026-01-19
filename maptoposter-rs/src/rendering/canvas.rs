@@ -1,8 +1,6 @@
 use std::path::Path;
 
-use tiny_skia::{
-    Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Stroke, Transform,
-};
+use tiny_skia::{Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Stroke, Transform};
 
 use crate::core::osm_client::{AreaFeature, HighwayType, RoadSegment};
 use crate::error::{AppError, Result};
@@ -17,7 +15,9 @@ pub struct Canvas {
     pub pixmap: Pixmap,
     pub width: u32,
     pub height: u32,
-    pub transform: Transform,
+    /// Coordinate transform parameters
+    geo_center: (f64, f64),  // (lat, lon)
+    geo_scale: f64,
 }
 
 impl Canvas {
@@ -30,7 +30,8 @@ impl Canvas {
             pixmap,
             width,
             height,
-            transform: Transform::identity(),
+            geo_center: (0.0, 0.0),
+            geo_scale: 1.0,
         })
     }
 
@@ -64,29 +65,31 @@ impl Canvas {
         let lat_range = max_lat - min_lat;
         let lon_range = max_lon - min_lon;
 
+        // Calculate center of bounds
+        let center_lat = (min_lat + max_lat) / 2.0;
+        let center_lon = (min_lon + max_lon) / 2.0;
+
         // Calculate scale to fit the poster while maintaining aspect ratio
         let scale_x = self.width as f64 / lon_range;
         let scale_y = self.height as f64 / lat_range;
         let scale = scale_x.min(scale_y);
 
-        // Center the map
-        let offset_x = (self.width as f64 - lon_range * scale) / 2.0;
-        let offset_y = (self.height as f64 - lat_range * scale) / 2.0;
-
-        // Store transform parameters for coordinate conversion
-        // Note: We flip Y axis since screen Y increases downward but lat increases upward
-        self.transform = Transform::from_scale(scale as f32, -(scale as f32))
-            .post_translate(
-                (offset_x - min_lon * scale) as f32,
-                (self.height as f64 - offset_y + max_lat * scale) as f32,
-            );
+        // Store transform parameters
+        self.geo_center = (center_lat, center_lon);
+        self.geo_scale = scale;
     }
 
     /// Convert geographic coordinates to screen coordinates
     pub fn geo_to_screen(&self, lat: f64, lon: f64) -> (f32, f32) {
-        let mut point = tiny_skia::Point::from_xy(lon as f32, lat as f32);
-        self.transform.map_point(&mut point);
-        (point.x, point.y)
+        let (center_lat, center_lon) = self.geo_center;
+
+        // Convert lon to x (lon increases = x increases)
+        let x = (lon - center_lon) * self.geo_scale + (self.width as f64 / 2.0);
+
+        // Convert lat to y (lat increases = y decreases, since screen y goes down)
+        let y = (center_lat - lat) * self.geo_scale + (self.height as f64 / 2.0);
+
+        (x as f32, y as f32)
     }
 
     /// Draw filled polygons (for water, parks)
