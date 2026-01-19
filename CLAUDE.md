@@ -4,48 +4,101 @@ This document provides essential context for AI assistants working with this cod
 
 ## Project Overview
 
-**Purpose**: Generate beautiful, minimalist map posters for any city in the world with customizable themes and zoom levels.
+**Purpose**: Generate beautiful, minimalist map posters for any city in the world with customizable themes and zoom levels. Available as both a CLI tool and a web application.
 
 **Author**: Ankur Gupta
 **License**: MIT
 **Language**: Python 3.x
+**Version**: 2.0.0
 
 ## Directory Structure
 
 ```
 maptoposter/
-├── create_map_poster.py    # Main application (single-file, ~470 lines)
-├── requirements.txt        # Pinned Python dependencies (30 packages)
-├── README.md               # User documentation with examples
-├── LICENSE                 # MIT License
-├── .gitignore              # Ignores cache/, env/
-├── themes/                 # 17 JSON theme configuration files
-│   ├── feature_based.json  # Default theme
-│   ├── noir.json           # Black background with white roads
-│   ├── japanese_ink.json   # Minimalist ink wash style
-│   ├── neon_cyberpunk.json # Dark with electric pink/cyan
-│   └── ... (13 more)
-├── fonts/                  # Roboto font files (Bold, Regular, Light)
-└── posters/                # Generated PNG output files
+├── api/                        # FastAPI backend
+│   ├── __init__.py
+│   ├── main.py                 # FastAPI app, routes, static file serving
+│   ├── routes/
+│   │   ├── themes.py           # GET /api/themes endpoints
+│   │   ├── posters.py          # POST /api/posters, job management
+│   │   └── jobs.py             # Job status endpoints
+│   ├── schemas/
+│   │   └── poster.py           # Pydantic request/response models
+│   └── workers/                # Background job processing (placeholder)
+├── src/maptoposter/            # Core library (refactored modules)
+│   ├── __init__.py
+│   ├── config.py               # Centralized settings with env vars
+│   ├── exceptions.py           # Custom exception classes
+│   ├── core/
+│   │   ├── geocoding.py        # Nominatim geocoding functions
+│   │   └── poster_generator.py # PosterGenerator class, PosterRequest
+│   ├── rendering/
+│   │   ├── gradients.py        # Gradient fade overlays
+│   │   ├── road_styles.py      # Road color/width mapping
+│   │   └── typography.py       # Font loading and text rendering
+│   └── themes/
+│       └── loader.py           # Theme JSON loading utilities
+├── frontend/                   # Web UI
+│   ├── index.html              # Main HTML page
+│   ├── css/styles.css          # Styling
+│   └── js/
+│       ├── app.js              # Main application logic
+│       └── api.js              # API client functions
+├── themes/                     # 17 JSON theme configuration files
+├── fonts/                      # Roboto font files (Bold, Regular, Light)
+├── static/                     # Generated posters (served by API)
+├── posters/                    # CLI-generated poster output
+├── cli.py                      # Command-line interface wrapper
+├── create_map_poster.py        # Legacy single-file script (~470 lines)
+├── test_api.py                 # API integration tests
+├── test_generation.py          # Poster generation tests
+├── requirements.txt            # Python dependencies
+├── Dockerfile                  # Multi-stage Docker build
+├── docker-compose.yml          # Production compose config
+├── docker-compose.dev.yml      # Development with hot reload
+├── .env.example                # Environment variable template
+├── README.md                   # User documentation
+└── LICENSE                     # MIT License
 ```
 
 ## Quick Start Commands
+
+### CLI Usage
 
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 
 # Generate a poster (basic)
-python create_map_poster.py --city "New York" --country "USA"
+python cli.py --city "New York" --country "USA"
 
 # Generate with specific theme and zoom
-python create_map_poster.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000
+python cli.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000
 
 # List all available themes
-python create_map_poster.py --list-themes
+python cli.py --list-themes
+```
 
-# Show help and examples
-python create_map_poster.py
+### Web Application
+
+```bash
+# Run API server
+uvicorn api.main:app --reload --port 8000
+
+# Or with Docker
+docker compose up
+
+# Open browser to http://localhost:8000
+```
+
+### Running Tests
+
+```bash
+# Start API server first, then:
+python test_api.py
+
+# Test generation directly
+python test_generation.py
 ```
 
 ## CLI Arguments
@@ -55,8 +108,46 @@ python create_map_poster.py
 | `--city` | `-c` | Yes | - | City name |
 | `--country` | `-C` | Yes | - | Country name |
 | `--theme` | `-t` | No | feature_based | Theme name from themes/ |
-| `--distance` | `-d` | No | 29000 | Map radius in meters |
+| `--distance` | `-d` | No | 15000 | Map radius in meters |
 | `--list-themes` | - | No | - | List available themes |
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Serve frontend |
+| `GET` | `/health` | Health check |
+| `GET` | `/api/docs` | OpenAPI documentation |
+| `GET` | `/api/themes` | List all themes |
+| `GET` | `/api/themes/{name}` | Get theme details |
+| `POST` | `/api/posters` | Create poster job |
+| `GET` | `/api/posters/{job_id}` | Get job status |
+| `GET` | `/api/posters/{job_id}/download` | Download completed poster |
+
+### POST /api/posters Request Body
+
+```json
+{
+  "city": "Venice",
+  "country": "Italy",
+  "theme": "blueprint",
+  "distance": 4000
+}
+```
+
+### Job Status Response
+
+```json
+{
+  "job_id": "uuid",
+  "status": "queued|processing|completed|failed",
+  "progress": 0.75,
+  "current_step": "rendering_roads",
+  "message": "Applying road hierarchy colors...",
+  "download_url": "/api/posters/{job_id}/download",
+  "error": null
+}
+```
 
 ## Key Dependencies
 
@@ -67,15 +158,31 @@ python create_map_poster.py
 | `geopy` | Geocode city names to lat/lon via Nominatim |
 | `geopandas` | Handle geographic data (water, parks) |
 | `numpy` | Create gradient fade effects |
-| `tqdm` | Display progress bars |
+| `fastapi` | REST API framework |
+| `uvicorn` | ASGI server |
+| `pydantic` | Request/response validation |
 
 ## Code Architecture
 
 ### Data Flow
 
 ```
-CLI args → Geocoding (Nominatim) → Data Fetching (OSMnx) → Rendering (matplotlib) → PNG export
+CLI/API Request → Geocoding (Nominatim) → Data Fetching (OSMnx) → Rendering (matplotlib) → PNG export
 ```
+
+### Module Responsibilities
+
+| Module | Purpose |
+|--------|---------|
+| `api/main.py` | FastAPI app setup, CORS, route mounting |
+| `api/routes/posters.py` | Poster creation, job management, background tasks |
+| `api/routes/themes.py` | Theme listing and retrieval |
+| `src/maptoposter/config.py` | Centralized settings, env var support |
+| `src/maptoposter/core/poster_generator.py` | `PosterGenerator` class with progress callbacks |
+| `src/maptoposter/core/geocoding.py` | `get_coordinates()`, coordinate formatting |
+| `src/maptoposter/rendering/road_styles.py` | Road color/width by OSM highway type |
+| `src/maptoposter/rendering/gradients.py` | Top/bottom fade overlays |
+| `src/maptoposter/themes/loader.py` | Theme JSON loading with fallbacks |
 
 ### Rendering Pipeline (z-order layers)
 
@@ -88,28 +195,52 @@ z=1   Water (blue polygons)
 z=0   Background color
 ```
 
-### Key Functions
-
-| Function | Lines | Purpose |
-|----------|-------|---------|
-| `get_coordinates()` | 196-214 | Geocode city/country to lat/lon |
-| `create_poster()` | 216-323 | Main rendering pipeline |
-| `get_edge_colors_by_type()` | 134-165 | Map OSM highway types to colors |
-| `get_edge_widths_by_type()` | 167-193 | Map OSM highway types to line widths |
-| `create_gradient_fade()` | 100-132 | Create transparency gradient overlay |
-| `load_theme()` | 66-95 | Load JSON theme with fallback |
-| `load_fonts()` | 18-35 | Load Roboto font files |
-| `generate_output_filename()` | 39-49 | Create unique timestamped filename |
-| `get_available_themes()` | 51-64 | Scan themes/ directory |
-| `list_themes()` | 381-404 | Display themes with descriptions |
-| `print_examples()` | 325-379 | Show CLI usage examples |
-
-### Global Constants
+### Key Classes
 
 ```python
-THEMES_DIR = "themes"    # Theme JSON files location
-FONTS_DIR = "fonts"      # Roboto font files location
-POSTERS_DIR = "posters"  # Generated output location
+# PosterRequest - generation parameters
+@dataclass
+class PosterRequest:
+    city: str
+    country: str
+    theme_name: str = "feature_based"
+    distance: int = 15000
+    dpi: int = 300
+
+# PosterGenerator - main generation logic
+class PosterGenerator:
+    def __init__(self, theme: Dict[str, Any])
+    def generate(self, request, coordinates, progress_callback) -> io.BytesIO
+
+# GenerationProgress - progress updates
+@dataclass
+class GenerationProgress:
+    step: str           # e.g., "fetching_streets", "rendering_roads"
+    progress: float     # 0.0 to 1.0
+    message: str        # Human-readable status
+```
+
+## Environment Configuration
+
+Copy `.env.example` to `.env` and customize:
+
+```bash
+# Redis URL (for production job queue)
+REDIS_URL=redis://localhost:6379
+
+# Map generation settings
+MAX_DISTANCE=50000
+MIN_DISTANCE=2000
+DEFAULT_DISTANCE=15000
+DEFAULT_THEME=feature_based
+
+# Rate limiting (seconds)
+NOMINATIM_DELAY=1.0
+OSM_DELAY=0.5
+
+# Output settings
+OUTPUT_DPI=300
+PREVIEW_DPI=72
 ```
 
 ## Theme System
@@ -120,17 +251,17 @@ POSTERS_DIR = "posters"  # Generated output location
 {
   "name": "Theme Name",
   "description": "Theme description",
-  "bg": "#FFFFFF",              // Background color
-  "text": "#000000",            // Text color
-  "gradient_color": "#FFFFFF",  // Fade overlay color
-  "water": "#C0C0C0",           // Water features
-  "parks": "#F0F0F0",           // Parks/green spaces
-  "road_motorway": "#0A0A0A",   // Motorways (thickest)
-  "road_primary": "#1A1A1A",    // Primary roads
-  "road_secondary": "#2A2A2A",  // Secondary roads
-  "road_tertiary": "#3A3A3A",   // Tertiary roads
-  "road_residential": "#4A4A4A", // Residential (thinnest)
-  "road_default": "#3A3A3A"     // Fallback color
+  "bg": "#FFFFFF",
+  "text": "#000000",
+  "gradient_color": "#FFFFFF",
+  "water": "#C0C0C0",
+  "parks": "#F0F0F0",
+  "road_motorway": "#0A0A0A",
+  "road_primary": "#1A1A1A",
+  "road_secondary": "#2A2A2A",
+  "road_tertiary": "#3A3A3A",
+  "road_residential": "#4A4A4A",
+  "road_default": "#3A3A3A"
 }
 ```
 
@@ -141,7 +272,7 @@ POSTERS_DIR = "posters"  # Generated output location
 ### Adding a New Theme
 
 1. Create `themes/my_theme.json` with the structure above
-2. The theme is automatically available via `--theme my_theme`
+2. The theme is automatically available via CLI `--theme my_theme` or API
 
 ## Road Hierarchy (OSM Highway Types)
 
@@ -158,57 +289,89 @@ POSTERS_DIR = "posters"  # Generated output location
 ### Style Patterns
 
 - **snake_case** for functions and variables
+- **PascalCase** for classes
 - **UPPERCASE** for module constants
 - **f-strings** for string formatting
-- **Docstrings** on all functions
-- **No type hints** (older Python style)
+- **Type hints** in new code (dataclasses, function signatures)
+- **Docstrings** on all functions and classes
 
-### Error Handling Pattern
+### Error Handling
 
 ```python
+# Custom exceptions in src/maptoposter/exceptions.py
+class GeocodingError(Exception): pass
+class ThemeNotFoundError(Exception): pass
+class DataFetchError(Exception): pass
+
+# Graceful degradation for optional features
 try:
     water = ox.features_from_point(point, tags={...}, dist=dist)
-except:
-    water = None  # Graceful degradation
+except Exception:
+    water = None  # Render without water layer
 ```
 
 ### Progress Feedback
 
 ```python
+# CLI uses emoji indicators
 print(f"✓ Success message")
 print(f"✗ Error message")
 print(f"⚠ Warning message")
+
+# API uses progress callbacks
+def progress_callback(prog: GenerationProgress):
+    print(f"[{int(prog.progress * 100):3d}%] {prog.message}")
 ```
 
-### Rate Limiting
+## Docker Usage
 
-```python
-time.sleep(1)    # Nominatim API respect
-time.sleep(0.5)  # Between OSM requests
+### Production
+
+```bash
+docker compose up -d
+# API available at http://localhost:8000
 ```
+
+### Development (with hot reload)
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+### Build stages
+
+- `base` - Python environment with GDAL dependencies
+- `api` - Production API server
+- `dev` - Development with `--reload`
 
 ## Common Development Tasks
+
+### Add a New API Endpoint
+
+1. Create route function in `api/routes/` appropriate file
+2. Add to router with appropriate prefix
+3. Define Pydantic schemas in `api/schemas/poster.py` if needed
 
 ### Add a New Map Layer (e.g., railways)
 
 ```python
-# In create_poster(), after parks fetch (~line 240):
+# In src/maptoposter/core/poster_generator.py, in generate():
 try:
     railways = ox.features_from_point(point, tags={'railway': 'rail'}, dist=dist)
-except:
+except Exception:
     railways = None
 
-# Plot before roads (~line 258):
+# Plot before roads (zorder between parks and roads):
 if railways is not None and not railways.empty:
-    railways.plot(ax=ax, color=THEME.get('railway', '#888888'),
+    railways.plot(ax=ax, facecolor=self.theme.get('railway', '#888888'),
                   linewidth=0.5, zorder=2.5)
 ```
 
 ### Add a New Theme Property
 
 1. Add to theme JSON: `"railway": "#FF0000"`
-2. Use in code: `THEME.get('railway', '#default')`
-3. Add fallback in `load_theme()` default dict
+2. Use in code: `self.theme.get('railway', '#default')`
+3. Update `api/schemas/poster.py` ThemeInfo if exposed via API
 
 ### Modify Typography Positioning
 
@@ -221,73 +384,59 @@ y=0.07   Coordinates
 y=0.02   Attribution (bottom-right)
 ```
 
-## OSMnx Patterns
-
-```python
-# Street network (all road types)
-G = ox.graph_from_point(point, dist=dist, network_type='all')
-
-# Water features
-water = ox.features_from_point(point, tags={'natural': 'water'}, dist=dist)
-
-# Parks
-parks = ox.features_from_point(point, tags={'leisure': 'park'}, dist=dist)
-
-# Buildings
-buildings = ox.features_from_point(point, tags={'building': True}, dist=dist)
-
-# Different network types
-network_type='drive'  # Roads only (faster)
-network_type='bike'   # Bike paths
-network_type='walk'   # Pedestrian paths
-```
-
 ## Performance Notes
 
 - **Large distances (>20km)**: Slow downloads, high memory usage
-- **Quick previews**: Change `dpi=300` to `dpi=150` in `plt.savefig()`
+- **Quick previews**: Use `PREVIEW_DPI=72` env var or lower dpi parameter
 - **Faster renders**: Use `network_type='drive'` instead of `'all'`
 - **Rate limits**: Nominatim requires 1 second between requests
+- **Job timeout**: Long-running jobs may timeout; consider smaller distances
 
 ## Testing
 
-There are no automated tests in this codebase. Testing is done manually:
-
 ```bash
-# Quick test with small distance
-python create_map_poster.py -c "Venice" -C "Italy" -t blueprint -d 4000
+# API tests (requires running server on port 8002)
+python test_api.py
 
-# Test a new theme
-python create_map_poster.py -c "Tokyo" -C "Japan" -t my_new_theme -d 8000
+# Quick manual test with small distance
+python cli.py -c "Venice" -C "Italy" -t blueprint -d 4000
 ```
+
+### Test Coverage
+
+- `test_api.py`: Health, themes, frontend, API docs, poster generation
+- `test_generation.py`: Direct poster generation without API
 
 ## Output Format
 
-- **Format**: PNG at 300 DPI
-- **Filename**: `{city}_{theme}_{YYYYMMDD_HHMMSS}.png`
-- **Location**: `posters/` directory
+- **Format**: PNG at configurable DPI (default 300)
+- **CLI Filename**: `{city}_{theme}_{YYYYMMDD_HHMMSS}.png`
+- **API Filename**: `{job_id}.png` (served from static/)
 - **Size**: 3-16 MB depending on map complexity
 
 ## Important Notes for AI Assistants
 
-1. **Single-file architecture**: All code is in `create_map_poster.py` (~470 lines)
-2. **No tests**: Changes should be manually verified
-3. **Theme validation**: Themes must exist in `themes/` directory before use
-4. **Fonts required**: Roboto fonts must be present in `fonts/` directory
-5. **API rate limits**: Nominatim has strict rate limits (1 req/sec)
-6. **Global state**: `THEME` is loaded as a module-level variable after CLI parsing
-7. **Graceful degradation**: Missing water/parks features don't crash the app
-8. **Dependencies are pinned**: All versions locked in requirements.txt
+1. **Dual architecture**: Both legacy single-file (`create_map_poster.py`) and modular (`src/maptoposter/`) exist
+2. **Prefer modular code**: New features should use the modular structure
+3. **API uses background tasks**: Poster generation is async via FastAPI BackgroundTasks
+4. **In-memory job storage**: Current implementation stores jobs in dict; Redis support is scaffolded
+5. **Theme validation**: Themes must exist in `themes/` directory before use
+6. **Fonts required**: Roboto fonts must be present in `fonts/` directory
+7. **API rate limits**: Nominatim has strict rate limits (1 req/sec)
+8. **Graceful degradation**: Missing water/parks features don't crash the app
+9. **CORS enabled**: API allows all origins (configure for production)
+10. **Static files**: Generated posters served from `static/` directory
 
 ## File Modification Guidelines
 
 When modifying this codebase:
 
-1. **For new features**: Add to `create_poster()` function, maintaining z-order
-2. **For new themes**: Create JSON file in `themes/` directory
-3. **For CLI changes**: Modify argparse section at bottom of file
-4. **For styling changes**: Modify `get_edge_colors_by_type()` and `get_edge_widths_by_type()`
-5. **For typography changes**: Modify text positioning section in `create_poster()`
+1. **For new features**: Add to `src/maptoposter/` modules, maintain separation of concerns
+2. **For API changes**: Update routes in `api/routes/`, schemas in `api/schemas/`
+3. **For new themes**: Create JSON file in `themes/` directory
+4. **For CLI changes**: Modify `cli.py`
+5. **For rendering changes**: Modify appropriate module in `src/maptoposter/rendering/`
+6. **For configuration**: Add to `src/maptoposter/config.py` and `.env.example`
 
 ## Distance Guide
 
