@@ -5,8 +5,12 @@ use serde::Deserialize;
 
 use crate::error::{AppError, Result};
 
-// Use Kumi.systems Overpass mirror for reliability
-const OVERPASS_URL: &str = "https://overpass.kumi.systems/api/interpreter";
+// Overpass API mirrors with fallback support
+const OVERPASS_MIRRORS: &[&str] = &[
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.openstreetmap.fr/api/interpreter",
+];
 const USER_AGENT: &str = "MapToPoster-RS/2.0 (https://github.com/maptoposter)";
 
 /// Highway types with their rendering priority
@@ -191,28 +195,51 @@ out skel qt;"#,
     parse_area_features(&response, "park")
 }
 
-/// Execute an Overpass API query
+/// Execute an Overpass API query with fallback to multiple mirrors
 async fn execute_overpass_query(query: &str, timeout_secs: f64) -> Result<OverpassResponse> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs_f64(timeout_secs))
         .user_agent(USER_AGENT)
         .build()?;
 
-    let response = client
-        .post(OVERPASS_URL)
-        .body(query.to_string())
-        .send()
-        .await?;
+    let mut last_error = None;
 
-    if !response.status().is_success() {
-        return Err(AppError::DataFetch(format!(
-            "Overpass API error: {}",
-            response.status()
-        )));
+    for (i, mirror) in OVERPASS_MIRRORS.iter().enumerate() {
+        tracing::debug!("Trying Overpass mirror {}: {}", i + 1, mirror);
+
+        match client
+            .post(*mirror)
+            .body(query.to_string())
+            .send()
+            .await
+        {
+            Ok(response) => {
+                if response.status().is_success() {
+                    match response.json::<OverpassResponse>().await {
+                        Ok(data) => {
+                            if i > 0 {
+                                tracing::info!("Successfully used fallback mirror: {}", mirror);
+                            }
+                            return Ok(data);
+                        }
+                        Err(e) => {
+                            last_error = Some(format!("Failed to parse response from {}: {}", mirror, e));
+                        }
+                    }
+                } else {
+                    last_error = Some(format!("Overpass API error from {}: {}", mirror, response.status()));
+                }
+            }
+            Err(e) => {
+                last_error = Some(format!("Request failed to {}: {}", mirror, e));
+                tracing::warn!("Mirror {} failed: {}", mirror, e);
+            }
+        }
     }
 
-    let data: OverpassResponse = response.json().await?;
-    Ok(data)
+    Err(AppError::DataFetch(
+        last_error.unwrap_or_else(|| "All Overpass mirrors failed".to_string())
+    ))
 }
 
 /// Parse road segments from Overpass response
