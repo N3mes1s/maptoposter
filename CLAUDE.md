@@ -1,238 +1,120 @@
-# CLAUDE.md - AI Assistant Guide for City Map Poster Generator
+# CLAUDE.md - AI Assistant Guide for MapToPoster
 
 This document provides essential context for AI assistants working with this codebase.
 
 ## Project Overview
 
-**Purpose**: Generate beautiful, minimalist map posters for any city in the world with customizable themes and zoom levels. Available as both a CLI tool and a web application.
+**Purpose**: Generate beautiful, minimalist map posters for any city in the world with customizable themes and zoom levels.
 
 **Author**: Ankur Gupta
 **License**: MIT
-**Language**: Python 3.10+
+**Language**: Rust
 **Version**: 2.0.0
-**Package Manager**: UV (fast Python package manager)
 
 ## Directory Structure
 
 ```
 maptoposter/
-├── api/                        # FastAPI backend
-│   ├── __init__.py
-│   ├── main.py                 # FastAPI app, routes, static file serving
-│   ├── routes/
-│   │   ├── themes.py           # GET /api/themes endpoints
-│   │   ├── posters.py          # POST /api/posters, job management
-│   │   ├── jobs.py             # Job status endpoints
-│   │   └── locations.py        # GET /api/locations/search (Nominatim autocomplete)
-│   ├── schemas/
-│   │   └── poster.py           # Pydantic request/response models
-│   └── workers/                # Background job processing (placeholder)
-├── src/maptoposter/            # Core library (refactored modules)
-│   ├── __init__.py
-│   ├── config.py               # Centralized settings with env vars and validation
-│   ├── exceptions.py           # Custom exception classes with details
-│   ├── logging_config.py       # Logging setup and configuration
-│   ├── core/
-│   │   ├── geocoding.py        # Nominatim geocoding functions
-│   │   └── poster_generator.py # PosterGenerator class, PosterRequest
-│   ├── rendering/
-│   │   ├── gradients.py        # Gradient fade overlays
-│   │   ├── road_styles.py      # Road color/width mapping
-│   │   └── typography.py       # Font loading and text rendering
-│   └── themes/
-│       └── loader.py           # Theme JSON loading utilities
-├── tests/                      # Pytest test suite
-│   ├── conftest.py             # Shared fixtures
-│   ├── test_config.py          # Configuration tests
-│   ├── test_exceptions.py      # Exception tests
-│   ├── test_themes.py          # Theme loading tests
-│   └── test_poster_generator.py # Generator tests
+├── maptoposter-rs/             # Rust server application
+│   ├── Cargo.toml              # Rust dependencies
+│   ├── Cargo.lock              # Locked dependency versions
+│   └── src/
+│       ├── main.rs             # Entry point, Axum routes
+│       ├── config.rs           # Settings from env vars
+│       ├── error.rs            # Custom error types
+│       ├── api/
+│       │   ├── mod.rs
+│       │   ├── handlers/
+│       │   │   ├── posters.rs  # POST /api/posters, job processing
+│       │   │   ├── jobs.rs     # SSE progress streaming
+│       │   │   └── themes.rs   # GET /api/themes
+│       │   ├── models.rs       # Request/response structs
+│       │   └── state.rs        # AppState, job storage, map cache
+│       ├── core/
+│       │   ├── geocoding.rs    # Nominatim geocoding
+│       │   ├── osm_client.rs   # Overpass API with fallback mirrors
+│       │   ├── poster_generator.rs  # Main generation logic
+│       │   └── progress.rs     # Progress callback types
+│       ├── rendering/
+│       │   ├── canvas.rs       # tiny-skia rendering, coordinate transform
+│       │   ├── gradients.rs    # Fade overlays
+│       │   └── road_styles.rs  # Road width/color mapping
+│       └── themes/
+│           └── loader.rs       # Theme JSON loading
 ├── frontend/                   # Web UI
-│   ├── index.html              # Main HTML page
-│   ├── css/styles.css          # Styling
+│   ├── index.html
+│   ├── css/styles.css
 │   └── js/
 │       ├── app.js              # Main application logic
-│       └── api.js              # API client functions
-├── themes/                     # 17 JSON theme configuration files
+│       └── api.js              # API client with SSE
+├── themes/                     # 35 JSON theme configuration files
 ├── fonts/                      # Roboto font files (Bold, Regular, Light)
 ├── static/                     # Generated posters (served by API)
-├── posters/                    # CLI-generated poster output
-├── cli.py                      # Command-line interface wrapper
-├── create_map_poster.py        # Legacy single-file script (~470 lines)
-├── test_api.py                 # API integration tests
-├── test_generation.py          # Poster generation tests
-├── pyproject.toml              # Project metadata and dependencies (UV/PEP 621)
-├── uv.lock                     # Locked dependencies (committed to git)
-├── requirements.txt            # Legacy pip requirements (deprecated)
-├── Dockerfile                  # Multi-stage Docker build with UV
+├── posters/                    # Example posters
+├── Dockerfile                  # Multi-stage Rust build
 ├── docker-compose.yml          # Production compose config
-├── docker-compose.dev.yml      # Development with hot reload
-├── .env.example                # Environment variable template
-├── README.md                   # User documentation
-└── LICENSE                     # MIT License
+├── railway.toml                # Railway deployment config
+└── README.md                   # User documentation
 ```
 
 ## Quick Start Commands
 
-### Prerequisites
-
-Install UV (fast Python package manager):
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Or with pip
-pip install uv
-
-# Or with Homebrew
-brew install uv
-```
-
-### Setup and Run
+### Using Docker (Recommended)
 
 ```bash
-# Clone and enter project
-cd maptoposter
-
-# Install dependencies (creates .venv automatically)
-uv sync
-
-# Generate a poster (basic)
-uv run python cli.py --city "New York" --country "USA"
-
-# Generate with specific theme and zoom
-uv run python cli.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000
-
-# List all available themes
-uv run python cli.py --list-themes
-
-# Or use the installed command
-uv run maptoposter --city "Paris" --country "France"
-```
-
-### Web Application
-
-```bash
-# Run API server
-uv run uvicorn api.main:app --reload --port 8000
-
-# Or with Docker
 docker compose up
-
-# Open browser to http://localhost:8000
+# Open http://localhost:8000
 ```
 
-### Running Tests
+### Building from Source
 
 ```bash
-# Run all tests
-uv run pytest
+cd maptoposter-rs
+cargo build --release
 
-# Start API server first for integration tests, then:
-uv run python test_api.py
+# Copy assets
+cp -r ../themes ../fonts ../frontend .
 
-# Test generation directly
-uv run python test_generation.py
+# Run
+./target/release/maptoposter-rs
 ```
 
 ### Development
 
 ```bash
-# Install with dev dependencies
-uv sync --all-extras
+cd maptoposter-rs
 
-# Run linter
-uv run ruff check .
+# Build debug
+cargo build
+
+# Run with hot reload (requires cargo-watch)
+cargo watch -x run
+
+# Run tests
+cargo test
+
+# Check code
+cargo clippy
 
 # Format code
-uv run ruff format .
-
-# Add a new dependency
-uv add package-name
-
-# Add a dev dependency
-uv add --dev package-name
-
-# Update all dependencies
-uv lock --upgrade
-uv sync
+cargo fmt
 ```
-
-## UV Package Management
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `pyproject.toml` | Project metadata, dependencies, tool configs |
-| `uv.lock` | Locked dependency versions (commit this!) |
-| `.venv/` | Virtual environment (gitignored) |
-| `requirements.txt` | Legacy file, kept for compatibility |
-
-### Common UV Commands
-
-```bash
-# Install/sync dependencies
-uv sync                      # Install all deps from lock file
-uv sync --frozen             # Strict: fail if lock file outdated
-uv sync --all-extras         # Include optional deps (redis, dev)
-
-# Run commands in the environment
-uv run python script.py      # Run Python script
-uv run pytest                # Run pytest
-uv run uvicorn ...           # Run uvicorn
-
-# Manage dependencies
-uv add fastapi               # Add to [project.dependencies]
-uv add --dev pytest          # Add to [tool.uv.dev-dependencies]
-uv add --optional redis rq   # Add to [project.optional-dependencies.redis]
-uv remove package            # Remove a dependency
-
-# Lock file management
-uv lock                      # Update lock file
-uv lock --upgrade            # Upgrade all packages
-uv lock --upgrade-package X  # Upgrade specific package
-```
-
-### Optional Dependency Groups
-
-```bash
-# Install with Redis support
-uv sync --extra redis
-
-# Install with dev tools (pytest, ruff, httpx)
-uv sync --group dev
-
-# Install everything
-uv sync --all-extras
-```
-
-## CLI Arguments
-
-| Argument | Short | Required | Default | Description |
-|----------|-------|----------|---------|-------------|
-| `--city` | `-c` | Yes | - | City name |
-| `--country` | `-C` | Yes | - | Country name |
-| `--theme` | `-t` | No | feature_based | Theme name from themes/ |
-| `--distance` | `-d` | No | 15000 | Map radius in meters |
-| `--list-themes` | - | No | - | List available themes |
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Serve frontend |
-| `GET` | `/health` | Basic health check |
-| `GET` | `/health/ready` | Readiness check (verifies themes, fonts, directories) |
-| `GET` | `/api/docs` | OpenAPI documentation |
-| `GET` | `/api/themes` | List all themes |
-| `GET` | `/api/themes/{name}` | Get theme details |
+| `GET` | `/health` | Health check |
+| `GET` | `/api/themes` | List all 35 themes |
+| `GET` | `/api/themes/:name` | Get theme details |
 | `POST` | `/api/posters` | Create poster job |
-| `GET` | `/api/posters/{job_id}` | Get job status |
-| `GET` | `/api/posters/{job_id}/download` | Download completed poster |
-| `GET` | `/api/locations/search?q=<query>` | Search for locations using Nominatim |
+| `GET` | `/api/posters/:id` | Get job status |
+| `GET` | `/api/posters/:id/stream` | SSE progress stream |
+| `GET` | `/api/posters/:id/download` | Download poster PNG |
+| `POST` | `/api/posters/:id/rerender` | Re-render with cached data |
 
-### POST /api/posters Request Body
+### POST /api/posters Request
 
 ```json
 {
@@ -251,123 +133,125 @@ uv sync --all-extras
   "status": "queued|processing|completed|failed",
   "progress": 0.75,
   "current_step": "rendering_roads",
-  "message": "Applying road hierarchy colors...",
-  "download_url": "/api/posters/{job_id}/download",
-  "error": null
+  "message": "Rendering road network...",
+  "download_url": "/api/posters/{job_id}/download"
 }
 ```
 
-## Key Dependencies
+### SSE Progress Events
 
-| Package | Purpose |
-|---------|---------|
-| `osmnx` | Fetch OpenStreetMap street networks and features |
-| `matplotlib` | Render map visualizations and export PNG |
-| `geopy` | Geocode city names to lat/lon via Nominatim |
-| `geopandas` | Handle geographic data (water, parks) |
-| `numpy` | Create gradient fade effects |
-| `fastapi` | REST API framework |
-| `uvicorn` | ASGI server |
-| `pydantic` | Request/response validation |
+```
+event: progress
+data: {"job_id":"...","status":"processing","percent":15,"step":"fetching_streets","message":"Fetching street network..."}
+
+event: completed
+data: {"job_id":"...","status":"completed","percent":100,"step":"completed","message":"Poster generated successfully","download_url":"..."}
+
+event: error
+data: {"message":"Generation failed: ..."}
+```
+
+## Key Dependencies (Cargo.toml)
+
+| Crate | Purpose |
+|-------|---------|
+| `axum` | HTTP framework |
+| `tokio` | Async runtime |
+| `reqwest` | HTTP client for Nominatim/Overpass |
+| `tiny-skia` | 2D rendering (PNG output) |
+| `serde` | JSON serialization |
+| `tracing` | Logging |
+| `uuid` | Job IDs |
 
 ## Code Architecture
 
 ### Data Flow
 
 ```
-CLI/API Request → Geocoding (Nominatim) → Data Fetching (OSMnx) → Rendering (matplotlib) → PNG export
+API Request → Geocoding (Nominatim) → Data Fetching (Overpass) → Rendering (tiny-skia) → PNG
 ```
 
-### Module Responsibilities
+### Key Modules
 
 | Module | Purpose |
 |--------|---------|
-| `api/main.py` | FastAPI app setup, CORS, route mounting |
-| `api/routes/posters.py` | Poster creation, job management, background tasks |
-| `api/routes/themes.py` | Theme listing and retrieval |
-| `src/maptoposter/config.py` | Centralized settings, env var support |
-| `src/maptoposter/core/poster_generator.py` | `PosterGenerator` class with progress callbacks |
-| `src/maptoposter/core/geocoding.py` | `get_coordinates()`, coordinate formatting |
-| `src/maptoposter/rendering/road_styles.py` | Road color/width by OSM highway type |
-| `src/maptoposter/rendering/gradients.py` | Top/bottom fade overlays |
-| `src/maptoposter/themes/loader.py` | Theme JSON loading with fallbacks |
+| `api/handlers/posters.rs` | Job creation, background processing |
+| `api/handlers/jobs.rs` | SSE streaming |
+| `api/state.rs` | AppState, job storage, map data cache |
+| `core/poster_generator.rs` | Main generation pipeline |
+| `core/osm_client.rs` | Overpass API with mirror fallback |
+| `core/geocoding.rs` | Nominatim geocoding |
+| `rendering/canvas.rs` | Coordinate transform, drawing |
 
-### Rendering Pipeline (z-order layers)
+### Rendering Layers (z-order)
 
 ```
-z=11  Text labels (city, country, coordinates, attribution)
-z=10  Gradient fades (top & bottom transparency overlays)
-z=3   Roads (via ox.plot_graph with hierarchy colors/widths)
+z=6   Text labels (city, country, coordinates)
+z=5   Gradient fades (top & bottom)
+z=4   Roads (sorted by highway type)
 z=2   Parks (green polygons)
 z=1   Water (blue polygons)
 z=0   Background color
 ```
 
-### Key Classes
+### Key Structs
 
-```python
-# PosterRequest - generation parameters
-@dataclass
-class PosterRequest:
-    city: str
-    country: str
-    theme_name: str = "feature_based"
-    distance: int = 15000
-    dpi: int = 300
+```rust
+// Poster request parameters
+pub struct PosterRequest {
+    pub city: String,
+    pub country: String,
+    pub theme_name: String,
+    pub distance: u32,
+    pub dpi: u32,
+}
 
-# PosterGenerator - main generation logic
-class PosterGenerator:
-    def __init__(self, theme: Dict[str, Any])
-    def generate(self, request, coordinates, progress_callback) -> io.BytesIO
+// Job state stored in AppState
+pub struct Job {
+    pub id: Uuid,
+    pub status: JobStatus,
+    pub progress: f32,
+    pub current_step: Option<String>,
+    pub message: Option<String>,
+    pub error: Option<String>,
+    pub output_path: Option<String>,
+}
 
-# GenerationProgress - progress updates
-@dataclass
-class GenerationProgress:
-    step: str           # e.g., "fetching_streets", "rendering_roads"
-    progress: float     # 0.0 to 1.0
-    message: str        # Human-readable status
+// Cached map data for re-rendering
+pub struct CachedMapData {
+    pub city: String,
+    pub country: String,
+    pub lat: f64,
+    pub lon: f64,
+    pub distance: u32,
+    pub streets: Vec<RoadSegment>,
+    pub water: Vec<AreaFeature>,
+    pub parks: Vec<AreaFeature>,
+}
+
+// Progress updates
+pub struct GenerationProgress {
+    pub step: String,
+    pub progress: f32,
+    pub message: String,
+}
 ```
 
-## Environment Configuration
+## Environment Variables
 
-Copy `.env.example` to `.env` and customize:
-
-```bash
-# API settings
-API_HOST=0.0.0.0
-API_PORT=8000
-REDIS_URL=redis://localhost:6379
-
-# CORS settings
-CORS_ORIGINS=*                    # Or comma-separated: http://localhost:3000,https://example.com
-CORS_ALLOW_CREDENTIALS=false
-
-# Map generation settings
-MAX_DISTANCE=50000
-MIN_DISTANCE=2000
-DEFAULT_DISTANCE=15000
-DEFAULT_THEME=feature_based
-
-# Rate limiting (seconds)
-NOMINATIM_DELAY=1.0
-OSM_DELAY=0.5
-
-# Timeout settings (seconds)
-NOMINATIM_TIMEOUT=10.0
-OSM_TIMEOUT=60.0
-
-# Output settings
-OUTPUT_DPI=300
-PREVIEW_DPI=72
-
-# Job settings
-JOB_TTL_HOURS=24
-MAX_CONCURRENT_JOBS=5
-
-# Logging
-LOG_LEVEL=INFO                    # DEBUG, INFO, WARNING, ERROR, CRITICAL
-LOG_JSON=false                    # Set to true for production
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8000` | Server port |
+| `RUST_LOG` | `info` | Log level |
+| `THEMES_DIR` | `/app/themes` | Theme JSON directory |
+| `FONTS_DIR` | `/app/fonts` | Font files directory |
+| `STATIC_DIR` | `/app/static` | Generated posters |
+| `FRONTEND_DIR` | `/app/frontend` | Frontend files |
+| `MAX_DISTANCE` | `20000` | Maximum radius (meters) |
+| `MIN_DISTANCE` | `2000` | Minimum radius (meters) |
+| `DEFAULT_DISTANCE` | `15000` | Default radius |
+| `OSM_TIMEOUT` | `120` | Overpass API timeout (seconds) |
+| `NOMINATIM_TIMEOUT` | `10` | Geocoding timeout (seconds) |
 
 ## Theme System
 
@@ -391,245 +275,148 @@ LOG_JSON=false                    # Set to true for production
 }
 ```
 
-### Available Themes (17 total)
+### Available Themes (35 total)
 
-`feature_based` (default), `noir`, `japanese_ink`, `neon_cyberpunk`, `blueprint`, `sunset`, `forest`, `ocean`, `midnight_blue`, `warm_beige`, `pastel_dream`, `contrast_zones`, `gradient_roads`, `monochrome_blue`, `autumn`, `copper_patina`, `terracotta`
+Classic: `feature_based`, `noir`, `japanese_ink`, `blueprint`
+Warm: `sunset`, `warm_beige`, `terracotta`, `autumn`, `copper_patina`, `desert`, `coral`
+Cool: `ocean`, `midnight_blue`, `arctic`, `sapphire`
+Nature: `forest`, `sage`, `mint`, `emerald`
+Modern: `neon_cyberpunk`, `neon_pink`, `electric_blue`, `pastel_dream`
+Monochrome: `monochrome_blue`, `sepia`, `concrete`, `platinum`, `gradient_roads`, `contrast_zones`
+Luxury: `rose_gold`, `gold`, `ruby`, `mocha`, `lavender`, `vintage_paper`
 
-### Adding a New Theme
+## Road Hierarchy
 
-1. Create `themes/my_theme.json` with the structure above
-2. The theme is automatically available via CLI `--theme my_theme` or API
+| Highway Type | Line Width |
+|--------------|------------|
+| motorway, motorway_link | 1.2 |
+| trunk, primary, primary_link | 1.0 |
+| secondary, secondary_link | 0.8 |
+| tertiary, tertiary_link | 0.6 |
+| residential, living_street | 0.4 |
+| service, unclassified | 0.3 |
 
-## Road Hierarchy (OSM Highway Types)
+## Error Handling
 
-| Road Type | Line Width | Priority |
-|-----------|------------|----------|
-| motorway, motorway_link | 1.2 | Highest |
-| trunk, primary, primary_link | 1.0 | High |
-| secondary, secondary_link | 0.8 | Medium |
-| tertiary, tertiary_link | 0.6 | Low |
-| residential, living_street | 0.4 | Lowest |
+```rust
+// Custom error types in error.rs
+pub enum AppError {
+    JobNotFound(String),
+    ThemeNotFound(String),
+    InvalidDistance(String),
+    Geocoding(String),
+    DataFetch(String),
+    Rendering(String),
+    Internal(String),
+}
 
-## Code Conventions
-
-### Style Patterns
-
-- **snake_case** for functions and variables
-- **PascalCase** for classes
-- **UPPERCASE** for module constants
-- **f-strings** for string formatting
-- **Type hints** in new code (dataclasses, function signatures)
-- **Docstrings** on all functions and classes
-
-### Error Handling
-
-```python
-# Custom exceptions in src/maptoposter/exceptions.py
-# All exceptions include message and details dict
-
-class MapToPosterError(Exception):       # Base class
-    def __init__(self, message: str, details: Optional[dict] = None)
-
-class GeocodingError(MapToPosterError):  # Failed to geocode location
-    def __init__(self, city: str, country: str, reason: str = "Location not found")
-
-class ThemeNotFoundError(MapToPosterError):  # Theme doesn't exist
-    def __init__(self, theme_name: str, available_themes: Optional[list] = None)
-
-class DataFetchError(MapToPosterError):  # Failed to fetch OSM data
-    def __init__(self, data_type: str, reason: str = "Unknown error")
-
-class InvalidDistanceError(MapToPosterError):  # Distance out of range
-    def __init__(self, distance: int, min_distance: int, max_distance: int)
-
-class InvalidInputError(MapToPosterError):  # Invalid user input
-class APITimeoutError(MapToPosterError):    # External API timeout
-class PartialDataWarning(MapToPosterError): # Non-fatal, generation continues
-
-# Graceful degradation for optional features (water, parks)
-try:
-    water = ox.features_from_point(point, tags={...}, dist=dist)
-except Exception as e:
-    logger.warning(f"Could not fetch water features: {e}")
-    water = None  # Render without water layer
+// All errors implement IntoResponse for Axum
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        // Returns JSON: {"error": "...", "message": "...", "detail": "..."}
+    }
+}
 ```
 
-### Progress Feedback
+## Job Processing
 
-```python
-# CLI uses emoji indicators
-print(f"✓ Success message")
-print(f"✗ Error message")
-print(f"⚠ Warning message")
+Jobs run in background tasks with:
+- 3-minute timeout for full generation
+- 30-second timeout for re-renders
+- Panic handling (caught and marked as failed)
+- Timeout handling (marked as failed with message)
 
-# API uses progress callbacks
-def progress_callback(prog: GenerationProgress):
-    print(f"[{int(prog.progress * 100):3d}%] {prog.message}")
+```rust
+// In posters.rs
+tokio::spawn(async move {
+    let result = tokio::time::timeout(
+        job_timeout,
+        AssertUnwindSafe(process_poster_job(...)).catch_unwind()
+    ).await;
+
+    match result {
+        Ok(Ok(())) => { /* success */ }
+        Ok(Err(_panic)) => { state.fail_job(job_id, "crashed") }
+        Err(_timeout) => { state.fail_job(job_id, "timed out") }
+    }
+});
 ```
 
-## Docker Usage
+## Overpass API
 
-### Production
+Uses multiple mirrors with fallback:
+1. `overpass-api.de` (main)
+2. `maps.mail.ru` (fast)
+3. `overpass.kumi.systems` (backup)
 
-```bash
-docker compose up -d
-# API available at http://localhost:8000
-```
-
-### Development (with hot reload)
-
-```bash
-docker compose -f docker-compose.dev.yml up
-```
-
-### Build stages
-
-- `base` - Python environment with GDAL dependencies and UV
-- `api` - Production API server
-- `dev` - Development with `--reload` and dev dependencies
-
-## Common Development Tasks
-
-### Add a New Dependency
-
-```bash
-# Runtime dependency
-uv add package-name
-
-# Dev-only dependency
-uv add --dev package-name
-
-# Optional dependency group
-uv add --optional redis redis
-```
-
-### Add a New API Endpoint
-
-1. Create route function in `api/routes/` appropriate file
-2. Add to router with appropriate prefix
-3. Define Pydantic schemas in `api/schemas/poster.py` if needed
-
-### Add a New Map Layer (e.g., railways)
-
-```python
-# In src/maptoposter/core/poster_generator.py, in generate():
-try:
-    railways = ox.features_from_point(point, tags={'railway': 'rail'}, dist=dist)
-except Exception:
-    railways = None
-
-# Plot before roads (zorder between parks and roads):
-if railways is not None and not railways.empty:
-    railways.plot(ax=ax, facecolor=self.theme.get('railway', '#888888'),
-                  linewidth=0.5, zorder=2.5)
-```
-
-### Add a New Theme Property
-
-1. Add to theme JSON: `"railway": "#FF0000"`
-2. Use in code: `self.theme.get('railway', '#default')`
-3. Update `api/schemas/poster.py` ThemeInfo if exposed via API
-
-### Modify Typography Positioning
-
-Text uses `transform=ax.transAxes` (0-1 normalized coordinates):
-```
-y=0.14   City name (spaced letters)
-y=0.125  Decorative line
-y=0.10   Country name
-y=0.07   Coordinates
-y=0.02   Attribution (bottom-right)
-```
+Queries use JSON output with configurable timeout.
 
 ## Performance Notes
 
-- **Large distances (>20km)**: Slow downloads, high memory usage
-- **Quick previews**: Use `PREVIEW_DPI=72` env var or lower dpi parameter
-- **Faster renders**: Use `network_type='drive'` instead of `'all'`
-- **Rate limits**: Nominatim requires 1 second between requests
-- **Job timeout**: Long-running jobs may timeout; consider smaller distances
+| Metric | Value |
+|--------|-------|
+| Memory (idle) | ~50 MB |
+| Memory (generating) | ~200 MB |
+| Initial generation | 15-30 seconds |
+| Theme re-render | ~3 seconds |
+| Output size | 3-10 MB PNG |
 
-## Testing
+## Development Guidelines
 
-```bash
-# Run pytest test suite (41 tests)
-uv run pytest
+### Adding a New API Endpoint
 
-# Run with verbose output
-uv run pytest -v
+1. Add handler in `api/handlers/`
+2. Add route in `main.rs`
+3. Add request/response types in `api/models.rs`
 
-# Run specific test file
-uv run pytest tests/test_config.py
+### Adding a New Theme
 
-# Run with coverage
-uv run pytest --cov=src/maptoposter
+1. Create `themes/my_theme.json`
+2. Theme is automatically available
 
-# API integration tests (requires running server on port 8002)
-uv run python test_api.py
+### Modifying Rendering
 
-# Quick manual test with small distance
-uv run python cli.py -c "Venice" -C "Italy" -t blueprint -d 4000
-```
+1. Canvas operations in `rendering/canvas.rs`
+2. Road styling in `rendering/road_styles.rs`
+3. Gradient effects in `rendering/gradients.rs`
 
-### Test Suite Structure
+### Adding New Map Features
 
-```
-tests/
-├── conftest.py             # Shared fixtures (sample_theme, coordinates, paths)
-├── test_config.py          # Settings validation, distance bounds, filename sanitization
-├── test_exceptions.py      # Exception class behavior and messages
-├── test_themes.py          # Theme loading, validation, file integrity
-└── test_poster_generator.py # PosterRequest validation, graceful degradation
-```
-
-### Test Coverage
-
-- **Unit tests** (`tests/`): Config, exceptions, themes, poster generation
-- **Integration tests** (`test_api.py`): Health, themes, frontend, API docs, poster generation
-- **Manual tests** (`test_generation.py`): Direct poster generation without API
-
-## Output Format
-
-- **Format**: PNG at configurable DPI (default 300)
-- **CLI Filename**: `{city}_{theme}_{YYYYMMDD_HHMMSS}.png`
-- **API Filename**: `{job_id}.png` (served from static/)
-- **Size**: 3-16 MB depending on map complexity
+1. Add Overpass query in `core/osm_client.rs`
+2. Add rendering in `core/poster_generator.rs`
+3. Add theme color in theme JSON
 
 ## Important Notes for AI Assistants
 
-1. **Use UV for all Python operations**: Always use `uv run`, `uv add`, `uv sync`
-2. **Lock file is committed**: `uv.lock` should be committed to version control
-3. **Run tests after changes**: `uv run pytest` - 41 tests should pass
-4. **Dual architecture**: Both legacy single-file (`create_map_poster.py`) and modular (`src/maptoposter/`) exist
-5. **Prefer modular code**: New features should use the modular structure
-6. **Use proper logging**: Import `from src.maptoposter.logging_config import get_logger`
-7. **Use custom exceptions**: Import from `src.maptoposter.exceptions` for specific error types
-8. **Validate inputs**: Use `settings.validate_distance()` and `settings.sanitize_filename()`
-9. **API uses background tasks**: Poster generation is async via FastAPI BackgroundTasks
-10. **In-memory job storage**: Current implementation stores jobs in dict; Redis support is scaffolded
-11. **Theme validation**: Themes must exist in `themes/` directory before use
-12. **Fonts required**: Roboto fonts must be present in `fonts/` directory
-13. **API rate limits**: Nominatim has strict rate limits (1 req/sec)
-14. **Graceful degradation**: Missing water/parks features log warnings but don't crash
-15. **CORS configurable**: Set `CORS_ORIGINS` env var for production
-16. **Static files**: Generated posters served from `static/` directory
+1. **Rust project**: Use `cargo build`, `cargo test`, `cargo clippy`
+2. **Async code**: Everything uses Tokio async runtime
+3. **Error handling**: Use `?` operator with `Result<T, AppError>`
+4. **Job state**: Jobs stored in `HashMap<Uuid, Job>` in `AppState`
+5. **Map caching**: Cached data allows instant theme switching
+6. **SSE streaming**: Progress updates via `axum::response::sse`
+7. **Fonts**: Roboto fonts required in `fonts/` directory
+8. **Themes**: JSON files in `themes/` directory (35 total)
+9. **Static files**: Generated PNGs served from `static/`
+10. **Timeouts**: Jobs have 3-minute timeout, re-renders 30 seconds
 
 ## File Modification Guidelines
 
-When modifying this codebase:
-
-1. **For new features**: Add to `src/maptoposter/` modules, maintain separation of concerns
-2. **For API changes**: Update routes in `api/routes/`, schemas in `api/schemas/`
-3. **For new themes**: Create JSON file in `themes/` directory
-4. **For CLI changes**: Modify `cli.py`
-5. **For rendering changes**: Modify appropriate module in `src/maptoposter/rendering/`
-6. **For configuration**: Add to `src/maptoposter/config.py` and `.env.example`
-7. **For new dependencies**: Use `uv add package-name`, then commit updated `uv.lock`
+| Change Type | Location |
+|-------------|----------|
+| API routes | `main.rs` |
+| Request handlers | `api/handlers/` |
+| Data models | `api/models.rs`, `api/state.rs` |
+| Business logic | `core/poster_generator.rs` |
+| Map data fetching | `core/osm_client.rs` |
+| Rendering | `rendering/canvas.rs` |
+| Configuration | `config.rs` |
+| New themes | `themes/*.json` |
+| Frontend | `frontend/` |
 
 ## Distance Guide
 
 | Distance | Best for |
 |----------|----------|
 | 4000-6000m | Small/dense cities (Venice, Amsterdam center) |
-| 8000-12000m | Medium cities, focused downtown (Paris, Barcelona) |
-| 15000-20000m | Large metros, full city view (Tokyo, Mumbai) |
+| 8000-12000m | Medium cities (Paris, Barcelona) |
+| 15000-20000m | Large metros (Tokyo, Mumbai) |

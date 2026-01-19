@@ -1,14 +1,7 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-.env/
-venv/
-.venv/
-ENV/
+# Rust
+target/
+Cargo.lock
+*.rs.bk
 
 # IDE
 .idea/
@@ -18,11 +11,9 @@ ENV/
 
 # Project specific
 cache/*
-posters/*
 static/*
 
 # Keep directories but ignore contents
-!posters/.gitkeep
 !static/.gitkeep
 
 # Environment
@@ -32,3 +23,8 @@ static/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
