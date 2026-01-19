@@ -46,6 +46,12 @@ ENV FONTS_DIR=/app/fonts
 ENV STATIC_DIR=/app/static
 ENV FRONTEND_DIR=/app/frontend
 
+# Generation limits - prevent OOM on large areas
+ENV MAX_DISTANCE=20000
+ENV MIN_DISTANCE=2000
+ENV DEFAULT_DISTANCE=15000
+ENV OSM_TIMEOUT=120
+
 EXPOSE ${PORT}
 
 # Health check

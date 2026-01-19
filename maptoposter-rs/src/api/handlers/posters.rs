@@ -45,21 +45,34 @@ pub async fn create_poster(
     let job = state.create_job(job_request.clone());
     let job_id = job.id;
 
-    // Spawn background task for poster generation with panic handling
+    // Spawn background task for poster generation with timeout and panic handling
     let state_clone = state.clone();
-    tokio::spawn(async move {
-        // Catch panics and mark job as failed
-        let result = AssertUnwindSafe(process_poster_job(
-            state_clone.clone(),
-            job_id,
-            job_request,
-        ))
-        .catch_unwind()
-        .await;
+    let job_timeout = std::time::Duration::from_secs(180); // 3 minute timeout for entire job
 
-        if result.is_err() {
-            tracing::error!("Job {} panicked during processing", job_id);
-            state_clone.fail_job(job_id, "Internal error: job processing crashed".to_string());
+    tokio::spawn(async move {
+        // Wrap job processing with timeout
+        let job_result = tokio::time::timeout(
+            job_timeout,
+            AssertUnwindSafe(process_poster_job(
+                state_clone.clone(),
+                job_id,
+                job_request,
+            ))
+            .catch_unwind()
+        ).await;
+
+        match job_result {
+            Ok(Ok(())) => {
+                // Job completed normally
+            }
+            Ok(Err(_panic)) => {
+                tracing::error!("Job {} panicked during processing", job_id);
+                state_clone.fail_job(job_id, "Internal error: job processing crashed".to_string());
+            }
+            Err(_timeout) => {
+                tracing::error!("Job {} timed out after {:?}", job_id, job_timeout);
+                state_clone.fail_job(job_id, "Generation timed out - try a smaller area".to_string());
+            }
         }
     });
 
@@ -240,22 +253,33 @@ pub async fn rerender_poster(
     // Copy cached data to new job
     state.cache_map_data(new_job_id, cached_data.clone());
 
-    // Spawn background task for re-rendering
+    // Spawn background task for re-rendering with timeout
     let state_clone = state.clone();
     let theme_name = request.theme.clone();
-    tokio::spawn(async move {
-        let result = AssertUnwindSafe(process_rerender_job(
-            state_clone.clone(),
-            new_job_id,
-            theme_name,
-            cached_data,
-        ))
-        .catch_unwind()
-        .await;
+    let rerender_timeout = std::time::Duration::from_secs(30); // 30 second timeout for re-render
 
-        if result.is_err() {
-            tracing::error!("Re-render job {} panicked", new_job_id);
-            state_clone.fail_job(new_job_id, "Internal error: re-render crashed".to_string());
+    tokio::spawn(async move {
+        let job_result = tokio::time::timeout(
+            rerender_timeout,
+            AssertUnwindSafe(process_rerender_job(
+                state_clone.clone(),
+                new_job_id,
+                theme_name,
+                cached_data,
+            ))
+            .catch_unwind()
+        ).await;
+
+        match job_result {
+            Ok(Ok(())) => {}
+            Ok(Err(_panic)) => {
+                tracing::error!("Re-render job {} panicked", new_job_id);
+                state_clone.fail_job(new_job_id, "Internal error: re-render crashed".to_string());
+            }
+            Err(_timeout) => {
+                tracing::error!("Re-render job {} timed out", new_job_id);
+                state_clone.fail_job(new_job_id, "Re-render timed out".to_string());
+            }
         }
     });
 
