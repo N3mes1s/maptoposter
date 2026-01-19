@@ -4,24 +4,30 @@ services:
   api:
     build:
       context: .
-      target: api
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:8000"
     volumes:
       - ./static:/app/static
       - ./themes:/app/themes:ro
       - ./fonts:/app/fonts:ro
+      - ./frontend:/app/frontend:ro
     environment:
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
+      - PORT=8000
+      - RUST_LOG=${RUST_LOG:-info}
+      - DEFAULT_THEME=${DEFAULT_THEME:-feature_based}
+      - DEFAULT_DISTANCE=${DEFAULT_DISTANCE:-15000}
+      - MIN_DISTANCE=${MIN_DISTANCE:-2000}
+      - MAX_DISTANCE=${MAX_DISTANCE:-50000}
+      - OUTPUT_DPI=${OUTPUT_DPI:-300}
+      - NOMINATIM_TIMEOUT=${NOMINATIM_TIMEOUT:-10}
+      - OSM_TIMEOUT=${OSM_TIMEOUT:-60}
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-5}
+      - JOB_TTL_HOURS=${JOB_TTL_HOURS:-24}
     restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
-volumes:
-  redis_data:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

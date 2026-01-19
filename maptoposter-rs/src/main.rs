@@ -51,12 +51,12 @@ async fn main() {
         .route("/health/ready", get(api::handlers::health::readiness_check))
         // API routes
         .route("/api/themes", get(api::handlers::themes::list_themes))
-        .route("/api/themes/{name}", get(api::handlers::themes::get_theme))
+        .route("/api/themes/:name", get(api::handlers::themes::get_theme))
         .route("/api/locations/search", get(api::handlers::locations::search_locations))
         .route("/api/posters", post(api::handlers::posters::create_poster))
-        .route("/api/posters/{job_id}", get(api::handlers::posters::get_poster_status))
-        .route("/api/posters/{job_id}/download", get(api::handlers::posters::download_poster))
-        .route("/api/posters/{job_id}/stream", get(api::handlers::jobs::stream_progress))
+        .route("/api/posters/:job_id", get(api::handlers::posters::get_poster_status))
+        .route("/api/posters/:job_id/download", get(api::handlers::posters::download_poster))
+        .route("/api/posters/:job_id/stream", get(api::handlers::jobs::stream_progress))
         // Static files for generated posters
         .nest_service("/static", ServeDir::new(&config.static_dir))
         // Serve frontend
