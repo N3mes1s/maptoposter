@@ -24,8 +24,8 @@ RUN uv sync --frozen --no-dev --no-install-project
 # Copy application code
 COPY . .
 
-# Install the project itself
-RUN uv sync --frozen --no-dev
+# Don't install project as package - keep src.maptoposter imports working
+# uv run will add the project root to PYTHONPATH automatically
 
 # Create directories
 RUN mkdir -p /app/static /app/posters
