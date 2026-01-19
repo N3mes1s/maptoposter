@@ -1,7 +1,7 @@
 # MapToPoster Online Generator
-# Multi-stage Dockerfile for API and Worker
+# Multi-stage Dockerfile using UV for fast dependency management
 
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 WORKDIR /app
 
@@ -12,21 +12,30 @@ RUN apt-get update && apt-get install -y \
     libproj-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install UV
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies using UV (no venv needed in container)
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code
 COPY . .
+
+# Install the project itself
+RUN uv sync --frozen --no-dev
 
 # Create directories
 RUN mkdir -p /app/static /app/posters
 
 # API server stage
-FROM base as api
+FROM base AS api
 EXPOSE 8000
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Development stage with hot reload
-FROM base as dev
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+FROM base AS dev
+RUN uv sync --frozen
+CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -8,8 +8,9 @@ This document provides essential context for AI assistants working with this cod
 
 **Author**: Ankur Gupta
 **License**: MIT
-**Language**: Python 3.x
+**Language**: Python 3.10+
 **Version**: 2.0.0
+**Package Manager**: UV (fast Python package manager)
 
 ## Directory Structure
 
@@ -52,8 +53,10 @@ maptoposter/
 ├── create_map_poster.py        # Legacy single-file script (~470 lines)
 ├── test_api.py                 # API integration tests
 ├── test_generation.py          # Poster generation tests
-├── requirements.txt            # Python dependencies
-├── Dockerfile                  # Multi-stage Docker build
+├── pyproject.toml              # Project metadata and dependencies (UV/PEP 621)
+├── uv.lock                     # Locked dependencies (committed to git)
+├── requirements.txt            # Legacy pip requirements (deprecated)
+├── Dockerfile                  # Multi-stage Docker build with UV
 ├── docker-compose.yml          # Production compose config
 ├── docker-compose.dev.yml      # Development with hot reload
 ├── .env.example                # Environment variable template
@@ -63,27 +66,47 @@ maptoposter/
 
 ## Quick Start Commands
 
-### CLI Usage
+### Prerequisites
+
+Install UV (fast Python package manager):
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or with pip
+pip install uv
+
+# Or with Homebrew
+brew install uv
+```
+
+### Setup and Run
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Clone and enter project
+cd maptoposter
+
+# Install dependencies (creates .venv automatically)
+uv sync
 
 # Generate a poster (basic)
-python cli.py --city "New York" --country "USA"
+uv run python cli.py --city "New York" --country "USA"
 
 # Generate with specific theme and zoom
-python cli.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000
+uv run python cli.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000
 
 # List all available themes
-python cli.py --list-themes
+uv run python cli.py --list-themes
+
+# Or use the installed command
+uv run maptoposter --city "Paris" --country "France"
 ```
 
 ### Web Application
 
 ```bash
 # Run API server
-uvicorn api.main:app --reload --port 8000
+uv run uvicorn api.main:app --reload --port 8000
 
 # Or with Docker
 docker compose up
@@ -94,11 +117,86 @@ docker compose up
 ### Running Tests
 
 ```bash
-# Start API server first, then:
-python test_api.py
+# Run all tests
+uv run pytest
+
+# Start API server first for integration tests, then:
+uv run python test_api.py
 
 # Test generation directly
-python test_generation.py
+uv run python test_generation.py
+```
+
+### Development
+
+```bash
+# Install with dev dependencies
+uv sync --all-extras
+
+# Run linter
+uv run ruff check .
+
+# Format code
+uv run ruff format .
+
+# Add a new dependency
+uv add package-name
+
+# Add a dev dependency
+uv add --dev package-name
+
+# Update all dependencies
+uv lock --upgrade
+uv sync
+```
+
+## UV Package Management
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `pyproject.toml` | Project metadata, dependencies, tool configs |
+| `uv.lock` | Locked dependency versions (commit this!) |
+| `.venv/` | Virtual environment (gitignored) |
+| `requirements.txt` | Legacy file, kept for compatibility |
+
+### Common UV Commands
+
+```bash
+# Install/sync dependencies
+uv sync                      # Install all deps from lock file
+uv sync --frozen             # Strict: fail if lock file outdated
+uv sync --all-extras         # Include optional deps (redis, dev)
+
+# Run commands in the environment
+uv run python script.py      # Run Python script
+uv run pytest                # Run pytest
+uv run uvicorn ...           # Run uvicorn
+
+# Manage dependencies
+uv add fastapi               # Add to [project.dependencies]
+uv add --dev pytest          # Add to [tool.uv.dev-dependencies]
+uv add --optional redis rq   # Add to [project.optional-dependencies.redis]
+uv remove package            # Remove a dependency
+
+# Lock file management
+uv lock                      # Update lock file
+uv lock --upgrade            # Upgrade all packages
+uv lock --upgrade-package X  # Upgrade specific package
+```
+
+### Optional Dependency Groups
+
+```bash
+# Install with Redis support
+uv sync --extra redis
+
+# Install with dev tools (pytest, ruff, httpx)
+uv sync --group dev
+
+# Install everything
+uv sync --all-extras
 ```
 
 ## CLI Arguments
@@ -340,11 +438,24 @@ docker compose -f docker-compose.dev.yml up
 
 ### Build stages
 
-- `base` - Python environment with GDAL dependencies
+- `base` - Python environment with GDAL dependencies and UV
 - `api` - Production API server
-- `dev` - Development with `--reload`
+- `dev` - Development with `--reload` and dev dependencies
 
 ## Common Development Tasks
+
+### Add a New Dependency
+
+```bash
+# Runtime dependency
+uv add package-name
+
+# Dev-only dependency
+uv add --dev package-name
+
+# Optional dependency group
+uv add --optional redis redis
+```
 
 ### Add a New API Endpoint
 
@@ -395,11 +506,14 @@ y=0.02   Attribution (bottom-right)
 ## Testing
 
 ```bash
+# Run pytest (with dev deps installed)
+uv run pytest
+
 # API tests (requires running server on port 8002)
-python test_api.py
+uv run python test_api.py
 
 # Quick manual test with small distance
-python cli.py -c "Venice" -C "Italy" -t blueprint -d 4000
+uv run python cli.py -c "Venice" -C "Italy" -t blueprint -d 4000
 ```
 
 ### Test Coverage
@@ -416,16 +530,18 @@ python cli.py -c "Venice" -C "Italy" -t blueprint -d 4000
 
 ## Important Notes for AI Assistants
 
-1. **Dual architecture**: Both legacy single-file (`create_map_poster.py`) and modular (`src/maptoposter/`) exist
-2. **Prefer modular code**: New features should use the modular structure
-3. **API uses background tasks**: Poster generation is async via FastAPI BackgroundTasks
-4. **In-memory job storage**: Current implementation stores jobs in dict; Redis support is scaffolded
-5. **Theme validation**: Themes must exist in `themes/` directory before use
-6. **Fonts required**: Roboto fonts must be present in `fonts/` directory
-7. **API rate limits**: Nominatim has strict rate limits (1 req/sec)
-8. **Graceful degradation**: Missing water/parks features don't crash the app
-9. **CORS enabled**: API allows all origins (configure for production)
-10. **Static files**: Generated posters served from `static/` directory
+1. **Use UV for all Python operations**: Always use `uv run`, `uv add`, `uv sync`
+2. **Lock file is committed**: `uv.lock` should be committed to version control
+3. **Dual architecture**: Both legacy single-file (`create_map_poster.py`) and modular (`src/maptoposter/`) exist
+4. **Prefer modular code**: New features should use the modular structure
+5. **API uses background tasks**: Poster generation is async via FastAPI BackgroundTasks
+6. **In-memory job storage**: Current implementation stores jobs in dict; Redis support is scaffolded
+7. **Theme validation**: Themes must exist in `themes/` directory before use
+8. **Fonts required**: Roboto fonts must be present in `fonts/` directory
+9. **API rate limits**: Nominatim has strict rate limits (1 req/sec)
+10. **Graceful degradation**: Missing water/parks features don't crash the app
+11. **CORS enabled**: API allows all origins (configure for production)
+12. **Static files**: Generated posters served from `static/` directory
 
 ## File Modification Guidelines
 
@@ -437,6 +553,7 @@ When modifying this codebase:
 4. **For CLI changes**: Modify `cli.py`
 5. **For rendering changes**: Modify appropriate module in `src/maptoposter/rendering/`
 6. **For configuration**: Add to `src/maptoposter/config.py` and `.env.example`
+7. **For new dependencies**: Use `uv add package-name`, then commit updated `uv.lock`
 
 ## Distance Guide
 
