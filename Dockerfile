@@ -1,6 +1,6 @@
 # MapToPoster API - Rust Server (Memory-Efficient)
 # Build stage
-FROM rust:1.75-slim-bookworm AS builder
+FROM rust:1.80-slim-bookworm AS builder
 
 WORKDIR /app
 
