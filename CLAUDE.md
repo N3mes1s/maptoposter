@@ -22,7 +22,8 @@ maptoposter/
 │   ├── routes/
 │   │   ├── themes.py           # GET /api/themes endpoints
 │   │   ├── posters.py          # POST /api/posters, job management
-│   │   └── jobs.py             # Job status endpoints
+│   │   ├── jobs.py             # Job status endpoints
+│   │   └── locations.py        # GET /api/locations/search (Nominatim autocomplete)
 │   ├── schemas/
 │   │   └── poster.py           # Pydantic request/response models
 │   └── workers/                # Background job processing (placeholder)
@@ -229,6 +230,7 @@ uv sync --all-extras
 | `POST` | `/api/posters` | Create poster job |
 | `GET` | `/api/posters/{job_id}` | Get job status |
 | `GET` | `/api/posters/{job_id}/download` | Download completed poster |
+| `GET` | `/api/locations/search?q=<query>` | Search for locations using Nominatim |
 
 ### POST /api/posters Request Body
 

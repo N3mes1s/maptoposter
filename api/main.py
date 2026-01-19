@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from api.routes import themes, posters, jobs
+from api.routes import themes, posters, jobs, locations
 from src.maptoposter.config import settings
 from src.maptoposter.logging_config import setup_logging, get_logger
 
@@ -74,6 +74,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 app.include_router(themes.router, prefix="/api/themes", tags=["themes"])
 app.include_router(posters.router, prefix="/api/posters", tags=["posters"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+app.include_router(locations.router, prefix="/api/locations", tags=["locations"])
 
 
 # Serve frontend

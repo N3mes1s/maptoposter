@@ -110,3 +110,20 @@ export function streamJobProgress(jobId, handlers) {
 export function getDownloadUrl(jobId) {
     return `${API_BASE}/posters/${jobId}/download`;
 }
+
+/**
+ * Search for locations using the Nominatim API
+ * @param {string} query - Search query (city name, etc.)
+ * @param {number} limit - Maximum results (default 8)
+ * @returns {Promise<{results: Array, query: string}>}
+ */
+export async function searchLocations(query, limit = 8) {
+    const params = new URLSearchParams({ q: query, limit: limit.toString() });
+    const response = await fetch(`${API_BASE}/locations/search?${params}`);
+
+    if (!response.ok) {
+        throw new Error('Failed to search locations');
+    }
+
+    return response.json();
+}

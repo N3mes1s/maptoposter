@@ -140,7 +140,9 @@ const state = {
     selectedTheme: 'feature_based',
     currentJob: null,
     eventSourceCleanup: null,
-    autocompleteIndex: -1
+    autocompleteIndex: -1,
+    searchDebounceTimer: null,
+    lastSearchQuery: ''
 };
 
 // DOM Elements
@@ -408,24 +410,102 @@ function adjustColor(hex, amount) {
 
 /**
  * Handle city autocomplete input
+ * Uses local database for instant results, then fetches from API for more options
  */
 function handleCityAutocomplete(query) {
     const trimmed = query.trim().toLowerCase();
 
     // Hide dropdown if query is too short
-    if (trimmed.length < 1) {
+    if (trimmed.length < 2) {
         closeAutocomplete();
         return;
     }
 
-    // Filter cities that match the query
-    const matches = CITIES_DATABASE.filter(item => {
+    // Don't re-search the same query
+    if (trimmed === state.lastSearchQuery) {
+        return;
+    }
+    state.lastSearchQuery = trimmed;
+
+    // First, show instant results from local database
+    const localMatches = CITIES_DATABASE.filter(item => {
         const cityMatch = item.city.toLowerCase().includes(trimmed);
         const countryMatch = item.country.toLowerCase().includes(trimmed);
         return cityMatch || countryMatch;
-    }).slice(0, 8); // Limit to 8 results
+    }).slice(0, 5);
 
-    if (matches.length === 0) {
+    // Render local results immediately
+    renderAutocompleteResults(localMatches, trimmed, true);
+
+    // Clear any existing debounce timer
+    if (state.searchDebounceTimer) {
+        clearTimeout(state.searchDebounceTimer);
+    }
+
+    // Debounce API search (300ms delay)
+    state.searchDebounceTimer = setTimeout(async () => {
+        try {
+            const response = await api.searchLocations(query, 8);
+            if (response.results && response.results.length > 0) {
+                // Convert API results to match local format
+                const apiResults = response.results.map(r => ({
+                    city: r.city,
+                    country: r.country,
+                    flag: getCountryFlag(r.country),
+                    fromApi: true
+                }));
+
+                // Merge local and API results, avoiding duplicates
+                const seen = new Set(localMatches.map(m => `${m.city.toLowerCase()}|${m.country.toLowerCase()}`));
+                const merged = [...localMatches];
+
+                for (const result of apiResults) {
+                    const key = `${result.city.toLowerCase()}|${result.country.toLowerCase()}`;
+                    if (!seen.has(key)) {
+                        merged.push(result);
+                        seen.add(key);
+                    }
+                }
+
+                renderAutocompleteResults(merged.slice(0, 8), trimmed, false);
+            }
+        } catch (error) {
+            console.warn('API search failed, using local results only:', error);
+        }
+    }, 300);
+}
+
+/**
+ * Get a flag emoji for a country (basic mapping for common countries)
+ */
+function getCountryFlag(country) {
+    const countryLower = country.toLowerCase();
+    const flagMap = {
+        'usa': '🇺🇸', 'united states': '🇺🇸', 'us': '🇺🇸',
+        'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'england': '🇬🇧', 'great britain': '🇬🇧',
+        'france': '🇫🇷', 'germany': '🇩🇪', 'italy': '🇮🇹', 'spain': '🇪🇸',
+        'japan': '🇯🇵', 'china': '🇨🇳', 'india': '🇮🇳', 'brazil': '🇧🇷',
+        'australia': '🇦🇺', 'canada': '🇨🇦', 'mexico': '🇲🇽', 'russia': '🇷🇺',
+        'netherlands': '🇳🇱', 'belgium': '🇧🇪', 'switzerland': '🇨🇭', 'austria': '🇦🇹',
+        'sweden': '🇸🇪', 'norway': '🇳🇴', 'denmark': '🇩🇰', 'finland': '🇫🇮',
+        'portugal': '🇵🇹', 'greece': '🇬🇷', 'turkey': '🇹🇷', 'poland': '🇵🇱',
+        'czech republic': '🇨🇿', 'czechia': '🇨🇿', 'hungary': '🇭🇺', 'ireland': '🇮🇪',
+        'south korea': '🇰🇷', 'singapore': '🇸🇬', 'thailand': '🇹🇭', 'vietnam': '🇻🇳',
+        'indonesia': '🇮🇩', 'malaysia': '🇲🇾', 'philippines': '🇵🇭', 'taiwan': '🇹🇼',
+        'uae': '🇦🇪', 'united arab emirates': '🇦🇪', 'israel': '🇮🇱', 'egypt': '🇪🇬',
+        'south africa': '🇿🇦', 'morocco': '🇲🇦', 'kenya': '🇰🇪', 'nigeria': '🇳🇬',
+        'argentina': '🇦🇷', 'chile': '🇨🇱', 'colombia': '🇨🇴', 'peru': '🇵🇪',
+        'new zealand': '🇳🇿', 'cuba': '🇨🇺', 'uruguay': '🇺🇾', 'ghana': '🇬🇭',
+        'tunisia': '🇹🇳', 'hong kong': '🇭🇰',
+    };
+    return flagMap[countryLower] || '🌍';
+}
+
+/**
+ * Render autocomplete results
+ */
+function renderAutocompleteResults(matches, query, isLoading) {
+    if (matches.length === 0 && !isLoading) {
         elements.cityDropdown.innerHTML = `
             <div class="autocomplete-empty">
                 No matching cities found. You can still type any city name.
@@ -435,9 +515,8 @@ function handleCityAutocomplete(query) {
         return;
     }
 
-    // Render autocomplete items
-    elements.cityDropdown.innerHTML = matches.map((item, index) => {
-        const highlightedCity = highlightMatch(item.city, trimmed);
+    let html = matches.map((item, index) => {
+        const highlightedCity = highlightMatch(item.city, query);
         return `
             <div class="autocomplete-item" data-index="${index}" data-city="${item.city}" data-country="${item.country}">
                 <span class="flag">${item.flag}</span>
@@ -446,6 +525,12 @@ function handleCityAutocomplete(query) {
             </div>
         `;
     }).join('');
+
+    if (isLoading && matches.length > 0) {
+        html += `<div class="autocomplete-loading">Searching more locations...</div>`;
+    }
+
+    elements.cityDropdown.innerHTML = html;
 
     // Add click handlers to items
     elements.cityDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
