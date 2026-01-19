@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use parking_lot::RwLock;
@@ -8,6 +7,7 @@ use uuid::Uuid;
 
 use crate::api::models::{JobStatus, JobStatusResponse};
 use crate::config::Settings;
+use crate::core::rate_limiter::{ApiRateLimiters, Cache};
 
 /// Internal job state
 #[derive(Debug, Clone)]
@@ -75,22 +75,45 @@ pub struct ProgressMessage {
     pub message: String,
 }
 
+/// Cached geocoding result
+#[derive(Debug, Clone)]
+pub struct GeocodingResult {
+    pub lat: f64,
+    pub lon: f64,
+}
+
 /// Application state shared across handlers
 pub struct AppState {
     pub config: Settings,
     pub jobs: RwLock<HashMap<Uuid, JobState>>,
     pub job_sender: mpsc::Sender<JobRequest>,
     job_receiver: RwLock<Option<mpsc::Receiver<JobRequest>>>,
+    /// Rate limiters for external APIs
+    pub rate_limiters: ApiRateLimiters,
+    /// Cache for geocoding results (city,country -> coordinates)
+    pub geocoding_cache: Cache<GeocodingResult>,
 }
 
 impl AppState {
     pub fn new(config: Settings) -> Self {
         let (tx, rx) = mpsc::channel(100);
+
+        // Create rate limiters with configured delays
+        let rate_limiters = ApiRateLimiters::new(
+            config.nominatim_delay,
+            config.osm_delay,
+        );
+
+        // Cache geocoding results for 24 hours, max 1000 entries
+        let geocoding_cache = Cache::new(24 * 60 * 60, 1000);
+
         Self {
             config,
             jobs: RwLock::new(HashMap::new()),
             job_sender: tx,
             job_receiver: RwLock::new(Some(rx)),
+            rate_limiters,
+            geocoding_cache,
         }
     }
 
