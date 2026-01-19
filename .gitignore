@@ -3,6 +3,11 @@ target/
 Cargo.lock
 *.rs.bk
 
+# Node.js (testing tools)
+node_modules/
+package.json
+package-lock.json
+
 # IDE
 .idea/
 .vscode/
@@ -12,6 +17,8 @@ Cargo.lock
 # Project specific
 cache/*
 static/*
+ui-screenshots/
+ui-analysis.js
 
 # Keep directories but ignore contents
 !static/.gitkeep
