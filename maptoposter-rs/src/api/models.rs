@@ -67,6 +67,7 @@ impl std::fmt::Display for JobStatus {
 /// Theme information response
 #[derive(Debug, Clone, Serialize)]
 pub struct ThemeInfo {
+    pub id: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -75,6 +76,12 @@ pub struct ThemeInfo {
     pub gradient_color: String,
     pub water: String,
     pub parks: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub road_motorway: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub road_primary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub road_default: Option<String>,
 }
 
 /// Theme list response
