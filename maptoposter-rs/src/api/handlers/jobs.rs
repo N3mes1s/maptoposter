@@ -53,7 +53,7 @@ pub async fn stream_progress(
 
                     if is_terminal {
                         // Send final event and signal end
-                        Event::default().data(data).event("complete")
+                        Event::default().data(data).event("completed")
                     } else {
                         Event::default().data(data).event("progress")
                     }
