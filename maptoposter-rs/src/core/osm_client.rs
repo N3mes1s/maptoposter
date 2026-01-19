@@ -5,11 +5,11 @@ use serde::Deserialize;
 
 use crate::error::{AppError, Result};
 
-// Overpass API mirrors with fallback support
+// Overpass API mirrors with fallback support (ordered by reliability/speed)
 const OVERPASS_MIRRORS: &[&str] = &[
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.openstreetmap.fr/api/interpreter",
+    "https://overpass-api.de/api/interpreter",           // Main/original server
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter", // Fast Russian mirror
+    "https://overpass.kumi.systems/api/interpreter",     // Backup mirror
 ];
 const USER_AGENT: &str = "MapToPoster-RS/2.0 (https://github.com/maptoposter)";
 
