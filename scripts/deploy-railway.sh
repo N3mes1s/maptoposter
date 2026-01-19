@@ -125,13 +125,9 @@ graphql "{
             \"environmentId\": \"$ENV_ID\",
             \"serviceId\": \"$SERVICE_ID\",
             \"variables\": {
-                \"API_HOST\": \"0.0.0.0\",
+                \"PYTHONPATH\": \"/app\",
                 \"CORS_ORIGINS\": \"*\",
-                \"LOG_LEVEL\": \"INFO\",
-                \"DEFAULT_THEME\": \"feature_based\",
-                \"OUTPUT_DPI\": \"150\",
-                \"NOMINATIM_TIMEOUT\": \"15.0\",
-                \"OSM_TIMEOUT\": \"120.0\"
+                \"LOG_LEVEL\": \"INFO\"
             }
         }
     }
