@@ -7,105 +7,236 @@
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
         <!-- Header -->
         <header class="header">
-            <h1>MAPTOPOSTER</h1>
-            <p class="subtitle">Generate beautiful minimalist city map posters</p>
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="28" height="28" rx="4" stroke="currentColor" stroke-width="2"/>
+                    <path d="M8 24L12 16L16 20L22 10L24 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="10" cy="10" r="2" fill="currentColor"/>
+                </svg>
+                <h1>MapToPoster</h1>
+            </div>
+            <p class="tagline">Transform any city into a stunning minimalist map poster</p>
         </header>
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Generator Form -->
-            <section class="form-section" id="generator-form">
-                <!-- Location Inputs -->
-                <div class="input-row">
-                    <div class="input-group">
-                        <label for="city">City</label>
-                        <input type="text" id="city" placeholder="e.g., Tokyo" required>
+            <div class="content-grid">
+                <!-- Left Panel: Form -->
+                <section class="form-panel" id="form-panel">
+                    <div class="panel-header">
+                        <h2>Create Your Poster</h2>
+                        <p>Enter a location and customize your design</p>
                     </div>
 
-                    <div class="input-group">
-                        <label for="country">Country</label>
-                        <input type="text" id="country" placeholder="e.g., Japan" required>
-                    </div>
-                </div>
+                    <!-- Location Section -->
+                    <div class="form-section">
+                        <div class="section-title">
+                            <span class="section-number">1</span>
+                            <span>Location</span>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="city">City</label>
+                                <input type="text" id="city" placeholder="e.g., Tokyo" required autocomplete="off">
+                            </div>
+                            <div class="input-group">
+                                <label for="country">Country</label>
+                                <input type="text" id="country" placeholder="e.g., Japan" required autocomplete="off">
+                            </div>
+                        </div>
 
-                <!-- Distance Slider -->
-                <div class="input-group">
-                    <label for="distance">
-                        Map Size: <span id="distance-value">15km</span>
-                    </label>
-                    <input type="range" id="distance"
-                           min="2000" max="50000" value="15000" step="1000">
-                    <div class="distance-hints">
-                        <span>Small / Dense</span>
-                        <span>Large Metro</span>
+                        <!-- Popular Cities -->
+                        <div class="quick-select">
+                            <span class="quick-label">Popular:</span>
+                            <button type="button" class="quick-btn" data-city="Tokyo" data-country="Japan">Tokyo</button>
+                            <button type="button" class="quick-btn" data-city="Paris" data-country="France">Paris</button>
+                            <button type="button" class="quick-btn" data-city="New York" data-country="USA">NYC</button>
+                            <button type="button" class="quick-btn" data-city="London" data-country="UK">London</button>
+                            <button type="button" class="quick-btn" data-city="Venice" data-country="Italy">Venice</button>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Theme Selector -->
-                <div class="input-group theme-section">
-                    <label>Select Theme</label>
-                    <div class="theme-grid" id="theme-selector">
-                        <div class="loading-themes">Loading themes...</div>
+                    <!-- Map Size Section -->
+                    <div class="form-section">
+                        <div class="section-title">
+                            <span class="section-number">2</span>
+                            <span>Map Coverage</span>
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span class="slider-label">Area radius</span>
+                                <span class="slider-value" id="distance-value">15 km</span>
+                            </div>
+                            <input type="range" id="distance" class="custom-slider"
+                                   min="2000" max="50000" value="15000" step="1000">
+                            <div class="slider-hints">
+                                <div class="hint">
+                                    <span class="hint-icon">
+                                        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/></svg>
+                                    </span>
+                                    <span>Dense center</span>
+                                </div>
+                                <div class="hint">
+                                    <span class="hint-icon">
+                                        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6"/></svg>
+                                    </span>
+                                    <span>Full metro</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Generate Button -->
-                <button type="submit" class="generate-btn" id="generate-btn">
-                    Generate Poster
-                </button>
-            </section>
-
-            <!-- Progress Section -->
-            <section class="progress-section" id="progress-section" hidden>
-                <div class="progress-container">
-                    <div class="progress-info">
-                        <span class="progress-step" id="progress-step">Starting...</span>
-                        <span class="progress-percent" id="progress-percent">0%</span>
+                    <!-- Theme Section -->
+                    <div class="form-section theme-form-section">
+                        <div class="section-title">
+                            <span class="section-number">3</span>
+                            <span>Theme</span>
+                            <span class="theme-count" id="theme-count"></span>
+                        </div>
+                        <div class="theme-grid" id="theme-selector">
+                            <div class="theme-loading">
+                                <div class="loading-spinner"></div>
+                                <span>Loading themes...</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progress-fill"></div>
+
+                    <!-- Generate Button -->
+                    <button type="submit" class="generate-btn" id="generate-btn">
+                        <span class="btn-text">Generate Poster</span>
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </span>
+                    </button>
+                </section>
+
+                <!-- Right Panel: Preview -->
+                <section class="preview-panel" id="preview-panel">
+                    <div class="poster-frame">
+                        <div class="frame-inner">
+                            <div class="poster-mockup" id="poster-mockup">
+                                <!-- Default placeholder -->
+                                <div class="mockup-placeholder">
+                                    <div class="mockup-roads">
+                                        <svg viewBox="0 0 200 280" fill="none">
+                                            <line x1="20" y1="50" x2="180" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                                            <line x1="40" y1="80" x2="160" y2="80" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                                            <line x1="100" y1="20" x2="100" y2="180" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                                            <line x1="60" y1="30" x2="60" y2="170" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                                            <line x1="140" y1="40" x2="140" y2="160" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                                            <path d="M30 120 Q80 100 120 140 T180 130" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                                            <line x1="20" y1="150" x2="180" y2="150" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="mockup-text">
+                                        <div class="mockup-city" id="mockup-city">YOUR CITY</div>
+                                        <div class="mockup-divider"></div>
+                                        <div class="mockup-country" id="mockup-country">COUNTRY</div>
+                                    </div>
+                                </div>
+                                <!-- Generated poster image -->
+                                <img id="poster-image" class="poster-image" alt="Generated poster" hidden>
+                            </div>
+                        </div>
+                        <div class="frame-shadow"></div>
+                    </div>
+
+                    <!-- Preview Actions (shown after generation) -->
+                    <div class="preview-actions" id="preview-actions" hidden>
+                        <button class="action-btn primary" id="download-btn">
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Download PNG</span>
+                        </button>
+                        <button class="action-btn secondary" id="new-btn">
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Create Another</span>
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Progress Overlay -->
+            <div class="progress-overlay" id="progress-overlay" hidden>
+                <div class="progress-card">
+                    <div class="progress-header">
+                        <h3>Generating Your Poster</h3>
+                        <p id="progress-location">Tokyo, Japan</p>
+                    </div>
+                    <div class="progress-visual">
+                        <div class="progress-ring">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="progress-ring-bg" cx="50" cy="50" r="45"/>
+                                <circle class="progress-ring-fill" id="progress-ring" cx="50" cy="50" r="45"/>
+                            </svg>
+                            <span class="progress-percent" id="progress-percent">0%</span>
+                        </div>
+                    </div>
+                    <div class="progress-steps">
+                        <div class="step" data-step="geocoding">
+                            <div class="step-indicator"></div>
+                            <span>Finding location</span>
+                        </div>
+                        <div class="step" data-step="fetching_streets">
+                            <div class="step-indicator"></div>
+                            <span>Fetching streets</span>
+                        </div>
+                        <div class="step" data-step="fetching_features">
+                            <div class="step-indicator"></div>
+                            <span>Loading features</span>
+                        </div>
+                        <div class="step" data-step="rendering">
+                            <div class="step-indicator"></div>
+                            <span>Rendering map</span>
+                        </div>
+                        <div class="step" data-step="finalizing">
+                            <div class="step-indicator"></div>
+                            <span>Finalizing</span>
+                        </div>
                     </div>
                     <p class="progress-message" id="progress-message">Initializing...</p>
                 </div>
-            </section>
+            </div>
 
-            <!-- Preview Section -->
-            <section class="preview-section" id="preview-section" hidden>
-                <div class="preview-header">
-                    <h2>Your Poster is Ready!</h2>
-                </div>
-                <div class="poster-preview">
-                    <img id="poster-image" alt="Generated poster">
-                </div>
-                <div class="preview-actions">
-                    <button class="download-btn" id="download-btn">
-                        Download PNG
+            <!-- Error Modal -->
+            <div class="error-overlay" id="error-overlay" hidden>
+                <div class="error-card">
+                    <div class="error-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                    </div>
+                    <h3>Generation Failed</h3>
+                    <p id="error-message">An error occurred while generating your poster.</p>
+                    <button class="action-btn primary" id="retry-btn">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Try Again</span>
                     </button>
-                    <button class="new-btn" id="new-btn">
-                        Create Another
-                    </button>
                 </div>
-            </section>
-
-            <!-- Error Section -->
-            <section class="error-section" id="error-section" hidden>
-                <div class="error-container">
-                    <h2>Oops! Something went wrong</h2>
-                    <p id="error-message"></p>
-                    <button class="new-btn" id="retry-btn">Try Again</button>
-                </div>
-            </section>
+            </div>
         </main>
 
         <!-- Footer -->
         <footer class="footer">
-            <p>Map data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors</p>
+            <div class="footer-content">
+                <p>Map data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>
+                <p class="footer-version">v2.0</p>
+            </div>
         </footer>
     </div>
 

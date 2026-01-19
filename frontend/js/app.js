@@ -1,5 +1,6 @@
 /**
  * MapToPoster Frontend Application
+ * Modern UI with live preview and enhanced interactions
  */
 
 import * as api from './api.js';
@@ -15,29 +16,38 @@ const state = {
 // DOM Elements
 const elements = {
     // Form elements
-    form: document.getElementById('generator-form'),
+    formPanel: document.getElementById('form-panel'),
     city: document.getElementById('city'),
     country: document.getElementById('country'),
     distance: document.getElementById('distance'),
     distanceValue: document.getElementById('distance-value'),
     themeSelector: document.getElementById('theme-selector'),
+    themeCount: document.getElementById('theme-count'),
     generateBtn: document.getElementById('generate-btn'),
 
-    // Progress elements
-    progressSection: document.getElementById('progress-section'),
-    progressFill: document.getElementById('progress-fill'),
-    progressStep: document.getElementById('progress-step'),
-    progressPercent: document.getElementById('progress-percent'),
-    progressMessage: document.getElementById('progress-message'),
+    // Quick select buttons
+    quickBtns: document.querySelectorAll('.quick-btn'),
 
     // Preview elements
-    previewSection: document.getElementById('preview-section'),
+    previewPanel: document.getElementById('preview-panel'),
+    posterMockup: document.getElementById('poster-mockup'),
+    mockupCity: document.getElementById('mockup-city'),
+    mockupCountry: document.getElementById('mockup-country'),
     posterImage: document.getElementById('poster-image'),
+    previewActions: document.getElementById('preview-actions'),
     downloadBtn: document.getElementById('download-btn'),
     newBtn: document.getElementById('new-btn'),
 
+    // Progress elements
+    progressOverlay: document.getElementById('progress-overlay'),
+    progressLocation: document.getElementById('progress-location'),
+    progressRing: document.getElementById('progress-ring'),
+    progressPercent: document.getElementById('progress-percent'),
+    progressSteps: document.querySelectorAll('.progress-steps .step'),
+    progressMessage: document.getElementById('progress-message'),
+
     // Error elements
-    errorSection: document.getElementById('error-section'),
+    errorOverlay: document.getElementById('error-overlay'),
     errorMessage: document.getElementById('error-message'),
     retryBtn: document.getElementById('retry-btn')
 };
@@ -48,6 +58,7 @@ const elements = {
 async function init() {
     await loadThemes();
     setupEventListeners();
+    updateMockupPreview();
 }
 
 /**
@@ -60,7 +71,11 @@ async function loadThemes() {
         renderThemeSelector();
     } catch (error) {
         console.error('Failed to load themes:', error);
-        elements.themeSelector.innerHTML = '<div class="loading-themes">Failed to load themes</div>';
+        elements.themeSelector.innerHTML = `
+            <div class="theme-loading">
+                <span>Failed to load themes. Please refresh.</span>
+            </div>
+        `;
     }
 }
 
@@ -69,21 +84,30 @@ async function loadThemes() {
  */
 function renderThemeSelector() {
     if (state.themes.length === 0) {
-        elements.themeSelector.innerHTML = '<div class="loading-themes">No themes available</div>';
+        elements.themeSelector.innerHTML = `
+            <div class="theme-loading">
+                <span>No themes available</span>
+            </div>
+        `;
         return;
     }
+
+    // Update theme count
+    elements.themeCount.textContent = `${state.themes.length} available`;
 
     elements.themeSelector.innerHTML = state.themes.map(theme => {
         const displayName = theme.name.replace(/_/g, ' ');
         const isSelected = theme.id === state.selectedTheme;
 
         // Create a gradient preview showing bg and road colors
-        const style = `background: linear-gradient(135deg, ${theme.bg} 40%, ${theme.road_motorway} 40%, ${theme.road_motorway} 60%, ${theme.road_primary} 60%)`;
+        const style = `background: linear-gradient(135deg, ${theme.bg} 40%, ${theme.road_motorway || theme.road_default} 40%, ${theme.road_motorway || theme.road_default} 60%, ${theme.road_primary || theme.road_default} 60%)`;
 
         return `
             <div class="theme-card ${isSelected ? 'selected' : ''}"
                  data-theme="${theme.id}"
                  data-name="${displayName}"
+                 data-bg="${theme.bg}"
+                 data-text="${theme.text}"
                  style="${style}"
                  title="${theme.description || displayName}">
             </div>
@@ -96,21 +120,19 @@ function renderThemeSelector() {
  */
 function setupEventListeners() {
     // Distance slider
-    elements.distance.addEventListener('input', (e) => {
-        const km = Math.round(e.target.value / 1000);
-        elements.distanceValue.textContent = `${km}km`;
-    });
+    elements.distance.addEventListener('input', handleDistanceChange);
 
     // Theme selection
-    elements.themeSelector.addEventListener('click', (e) => {
-        const card = e.target.closest('.theme-card');
-        if (card) {
-            state.selectedTheme = card.dataset.theme;
-            document.querySelectorAll('.theme-card').forEach(c =>
-                c.classList.toggle('selected', c === card)
-            );
-        }
+    elements.themeSelector.addEventListener('click', handleThemeSelect);
+
+    // Quick city selection
+    elements.quickBtns.forEach(btn => {
+        btn.addEventListener('click', handleQuickSelect);
     });
+
+    // City/Country input for live preview
+    elements.city.addEventListener('input', updateMockupPreview);
+    elements.country.addEventListener('input', updateMockupPreview);
 
     // Form submission
     elements.generateBtn.addEventListener('click', handleGenerate);
@@ -119,13 +141,119 @@ function setupEventListeners() {
     elements.newBtn.addEventListener('click', resetToForm);
     elements.retryBtn.addEventListener('click', resetToForm);
 
-    // Enter key on inputs
+    // Enter key navigation
     elements.city.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') elements.country.focus();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            elements.country.focus();
+        }
     });
     elements.country.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleGenerate();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleGenerate();
+        }
     });
+
+    // Close error overlay on background click
+    elements.errorOverlay.addEventListener('click', (e) => {
+        if (e.target === elements.errorOverlay) {
+            resetToForm();
+        }
+    });
+}
+
+/**
+ * Handle distance slider change
+ */
+function handleDistanceChange(e) {
+    const km = Math.round(e.target.value / 1000);
+    elements.distanceValue.textContent = `${km} km`;
+}
+
+/**
+ * Handle theme selection
+ */
+function handleThemeSelect(e) {
+    const card = e.target.closest('.theme-card');
+    if (!card) return;
+
+    state.selectedTheme = card.dataset.theme;
+
+    // Update selection visuals
+    document.querySelectorAll('.theme-card').forEach(c => {
+        c.classList.toggle('selected', c === card);
+    });
+
+    // Update mockup colors based on theme
+    updateMockupColors(card.dataset.bg, card.dataset.text);
+}
+
+/**
+ * Handle quick city selection
+ */
+function handleQuickSelect(e) {
+    const btn = e.target.closest('.quick-btn');
+    if (!btn) return;
+
+    elements.city.value = btn.dataset.city;
+    elements.country.value = btn.dataset.country;
+    updateMockupPreview();
+
+    // Visual feedback
+    btn.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        btn.style.transform = '';
+    }, 100);
+}
+
+/**
+ * Update the mockup preview with current city/country
+ */
+function updateMockupPreview() {
+    const city = elements.city.value.trim() || 'YOUR CITY';
+    const country = elements.country.value.trim() || 'COUNTRY';
+
+    elements.mockupCity.textContent = city.toUpperCase();
+    elements.mockupCountry.textContent = country.toUpperCase();
+}
+
+/**
+ * Update mockup colors based on selected theme
+ */
+function updateMockupColors(bgColor, textColor) {
+    if (!bgColor) return;
+
+    const mockup = elements.posterMockup;
+    mockup.style.background = `linear-gradient(145deg, ${bgColor} 0%, ${adjustColor(bgColor, -20)} 100%)`;
+
+    // Update text colors
+    const mockupCity = elements.mockupCity;
+    const mockupCountry = elements.mockupCountry;
+
+    if (textColor) {
+        mockupCity.style.color = textColor;
+        mockupCountry.style.color = adjustColor(textColor, -30);
+    }
+}
+
+/**
+ * Adjust color brightness
+ */
+function adjustColor(hex, amount) {
+    if (!hex || !hex.startsWith('#')) return hex;
+
+    let color = hex.slice(1);
+    if (color.length === 3) {
+        color = color.split('').map(c => c + c).join('');
+    }
+
+    const num = parseInt(color, 16);
+    let r = Math.min(255, Math.max(0, (num >> 16) + amount));
+    let g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+    let b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+
+    return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1);
 }
 
 /**
@@ -143,7 +271,7 @@ async function handleGenerate() {
 
     // Disable button and show progress
     elements.generateBtn.disabled = true;
-    showProgress();
+    showProgress(city, country);
 
     try {
         // Create poster job
@@ -169,37 +297,74 @@ async function handleGenerate() {
 }
 
 /**
- * Show the progress section
+ * Show the progress overlay
  */
-function showProgress() {
-    elements.form.hidden = true;
-    elements.progressSection.hidden = false;
-    elements.previewSection.hidden = true;
-    elements.errorSection.hidden = true;
+function showProgress(city, country) {
+    // Update location display
+    elements.progressLocation.textContent = `${city}, ${country}`;
 
     // Reset progress
-    elements.progressFill.style.width = '0%';
-    elements.progressStep.textContent = 'Starting...';
+    setProgressRing(0);
     elements.progressPercent.textContent = '0%';
     elements.progressMessage.textContent = 'Initializing...';
+
+    // Reset step states
+    elements.progressSteps.forEach(step => {
+        step.classList.remove('active', 'completed');
+    });
+
+    // Show overlay
+    elements.progressOverlay.hidden = false;
+}
+
+/**
+ * Set progress ring fill
+ */
+function setProgressRing(percent) {
+    const circumference = 2 * Math.PI * 45; // r = 45
+    const offset = circumference - (percent / 100) * circumference;
+    elements.progressRing.style.strokeDashoffset = offset;
 }
 
 /**
  * Update progress display
  */
 function updateProgress({ step, percent, message }) {
-    elements.progressFill.style.width = `${percent}%`;
-    elements.progressStep.textContent = formatStep(step);
+    // Update ring and percentage
+    setProgressRing(percent);
     elements.progressPercent.textContent = `${percent}%`;
     elements.progressMessage.textContent = message;
-}
 
-/**
- * Format step name for display
- */
-function formatStep(step) {
-    if (!step) return 'Processing';
-    return step.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    // Update step indicators
+    const stepMapping = {
+        'geocoding': 'geocoding',
+        'fetching_streets': 'fetching_streets',
+        'fetching_water': 'fetching_features',
+        'fetching_parks': 'fetching_features',
+        'rendering_roads': 'rendering',
+        'rendering_features': 'rendering',
+        'rendering_text': 'rendering',
+        'saving': 'finalizing',
+        'completed': 'finalizing'
+    };
+
+    const currentStepId = stepMapping[step] || step;
+    let foundCurrent = false;
+
+    elements.progressSteps.forEach(stepEl => {
+        const stepId = stepEl.dataset.step;
+
+        if (stepId === currentStepId) {
+            stepEl.classList.remove('completed');
+            stepEl.classList.add('active');
+            foundCurrent = true;
+        } else if (!foundCurrent) {
+            stepEl.classList.remove('active');
+            stepEl.classList.add('completed');
+        } else {
+            stepEl.classList.remove('active', 'completed');
+        }
+    });
 }
 
 /**
@@ -212,22 +377,41 @@ function handleCompleted({ download_url }) {
         state.eventSourceCleanup = null;
     }
 
-    // Show preview section
-    elements.progressSection.hidden = true;
-    elements.previewSection.hidden = false;
+    // Mark all steps as completed
+    elements.progressSteps.forEach(step => {
+        step.classList.remove('active');
+        step.classList.add('completed');
+    });
+    setProgressRing(100);
+    elements.progressPercent.textContent = '100%';
 
-    // Set image source
-    elements.posterImage.src = download_url;
+    // Small delay before showing result
+    setTimeout(() => {
+        // Hide progress overlay
+        elements.progressOverlay.hidden = true;
 
-    // Set up download button
-    elements.downloadBtn.onclick = () => {
-        const link = document.createElement('a');
-        link.href = download_url;
-        link.download = `${elements.city.value.toLowerCase().replace(/\s+/g, '_')}_${state.selectedTheme}_poster.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+        // Show the generated poster
+        const placeholder = elements.posterMockup.querySelector('.mockup-placeholder');
+        if (placeholder) {
+            placeholder.hidden = true;
+        }
+
+        elements.posterImage.src = download_url;
+        elements.posterImage.hidden = false;
+
+        // Show download actions
+        elements.previewActions.hidden = false;
+
+        // Set up download button
+        elements.downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.href = download_url;
+            link.download = `${elements.city.value.toLowerCase().replace(/\s+/g, '_')}_${state.selectedTheme}_poster.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+    }, 500);
 }
 
 /**
@@ -244,14 +428,12 @@ function handleError({ message }) {
 }
 
 /**
- * Show error message
+ * Show error overlay
  */
 function showError(message) {
-    elements.form.hidden = true;
-    elements.progressSection.hidden = true;
-    elements.previewSection.hidden = true;
-    elements.errorSection.hidden = false;
+    elements.progressOverlay.hidden = true;
     elements.errorMessage.textContent = message;
+    elements.errorOverlay.hidden = false;
     elements.generateBtn.disabled = false;
 }
 
@@ -265,14 +447,29 @@ function resetToForm() {
         state.eventSourceCleanup = null;
     }
 
-    elements.form.hidden = false;
-    elements.progressSection.hidden = true;
-    elements.previewSection.hidden = true;
-    elements.errorSection.hidden = true;
+    // Hide overlays
+    elements.progressOverlay.hidden = true;
+    elements.errorOverlay.hidden = true;
+
+    // Reset poster preview
+    const placeholder = elements.posterMockup.querySelector('.mockup-placeholder');
+    if (placeholder) {
+        placeholder.hidden = false;
+    }
+    elements.posterImage.hidden = true;
+    elements.posterImage.src = '';
+    elements.previewActions.hidden = true;
+
+    // Re-enable generate button
     elements.generateBtn.disabled = false;
 
     // Reset progress
-    elements.progressFill.style.width = '0%';
+    setProgressRing(0);
+
+    // Reset mockup colors
+    elements.posterMockup.style.background = '';
+    elements.mockupCity.style.color = '';
+    elements.mockupCountry.style.color = '';
 
     state.currentJob = null;
 }
