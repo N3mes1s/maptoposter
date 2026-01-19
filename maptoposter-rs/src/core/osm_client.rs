@@ -5,7 +5,8 @@ use serde::Deserialize;
 
 use crate::error::{AppError, Result};
 
-const OVERPASS_URL: &str = "https://overpass-api.de/api/interpreter";
+// Use Kumi.systems mirror as it tends to be more reliable
+const OVERPASS_URL: &str = "https://overpass.kumi.systems/api/interpreter";
 const USER_AGENT: &str = "MapToPoster-RS/2.0 (https://github.com/maptoposter)";
 
 /// Highway types with their rendering priority
