@@ -30,13 +30,7 @@ RUN uv sync --frozen --no-dev
 # Create directories
 RUN mkdir -p /app/static /app/posters
 
-# Production stage (default) - uses PORT env var for Railway/cloud deployments
-FROM base AS production
-ENV PORT=8000
-EXPOSE ${PORT}
-CMD uv run uvicorn api.main:app --host 0.0.0.0 --port ${PORT}
-
-# API server stage (fixed port)
+# API server stage (fixed port 8000)
 FROM base AS api
 EXPOSE 8000
 CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
@@ -45,3 +39,10 @@ CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "800
 FROM base AS dev
 RUN uv sync --frozen
 CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# Production stage (DEFAULT for cloud deployments like Railway)
+# Uses PORT env var - Railway/Render/etc set this automatically
+FROM base AS production
+ENV PORT=8000
+EXPOSE ${PORT}
+CMD uv run uvicorn api.main:app --host 0.0.0.0 --port ${PORT}
