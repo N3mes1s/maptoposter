@@ -262,6 +262,98 @@ body {
     color: var(--color-text-muted);
 }
 
+/* Autocomplete */
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-focus);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    display: none;
+    margin-top: 4px;
+}
+
+.autocomplete-dropdown.active {
+    display: block;
+    animation: dropdownFade 0.15s ease;
+}
+
+@keyframes dropdownFade {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.autocomplete-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+    background: var(--color-accent);
+}
+
+.autocomplete-item .city-name {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.autocomplete-item .country-name {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    margin-left: auto;
+}
+
+.autocomplete-item:hover .city-name,
+.autocomplete-item:hover .country-name,
+.autocomplete-item.selected .city-name,
+.autocomplete-item.selected .country-name {
+    color: var(--color-text);
+}
+
+.autocomplete-item .flag {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.autocomplete-highlight {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+.autocomplete-empty {
+    padding: 1rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
 /* Quick Select */
 .quick-select {
     display: flex;

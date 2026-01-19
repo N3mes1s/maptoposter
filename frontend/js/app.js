@@ -5,12 +5,142 @@
 
 import * as api from './api.js';
 
+// Popular world cities database with country and flag
+const CITIES_DATABASE = [
+    // Asia
+    { city: 'Tokyo', country: 'Japan', flag: '🇯🇵' },
+    { city: 'Kyoto', country: 'Japan', flag: '🇯🇵' },
+    { city: 'Osaka', country: 'Japan', flag: '🇯🇵' },
+    { city: 'Seoul', country: 'South Korea', flag: '🇰🇷' },
+    { city: 'Busan', country: 'South Korea', flag: '🇰🇷' },
+    { city: 'Beijing', country: 'China', flag: '🇨🇳' },
+    { city: 'Shanghai', country: 'China', flag: '🇨🇳' },
+    { city: 'Hong Kong', country: 'China', flag: '🇭🇰' },
+    { city: 'Singapore', country: 'Singapore', flag: '🇸🇬' },
+    { city: 'Bangkok', country: 'Thailand', flag: '🇹🇭' },
+    { city: 'Chiang Mai', country: 'Thailand', flag: '🇹🇭' },
+    { city: 'Hanoi', country: 'Vietnam', flag: '🇻🇳' },
+    { city: 'Ho Chi Minh City', country: 'Vietnam', flag: '🇻🇳' },
+    { city: 'Mumbai', country: 'India', flag: '🇮🇳' },
+    { city: 'Delhi', country: 'India', flag: '🇮🇳' },
+    { city: 'Bangalore', country: 'India', flag: '🇮🇳' },
+    { city: 'Jaipur', country: 'India', flag: '🇮🇳' },
+    { city: 'Dubai', country: 'UAE', flag: '🇦🇪' },
+    { city: 'Abu Dhabi', country: 'UAE', flag: '🇦🇪' },
+    { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷' },
+    { city: 'Taipei', country: 'Taiwan', flag: '🇹🇼' },
+    { city: 'Kuala Lumpur', country: 'Malaysia', flag: '🇲🇾' },
+    { city: 'Jakarta', country: 'Indonesia', flag: '🇮🇩' },
+    { city: 'Bali', country: 'Indonesia', flag: '🇮🇩' },
+    { city: 'Manila', country: 'Philippines', flag: '🇵🇭' },
+    { city: 'Tel Aviv', country: 'Israel', flag: '🇮🇱' },
+    { city: 'Jerusalem', country: 'Israel', flag: '🇮🇱' },
+
+    // Europe
+    { city: 'London', country: 'UK', flag: '🇬🇧' },
+    { city: 'Edinburgh', country: 'UK', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
+    { city: 'Manchester', country: 'UK', flag: '🇬🇧' },
+    { city: 'Paris', country: 'France', flag: '🇫🇷' },
+    { city: 'Lyon', country: 'France', flag: '🇫🇷' },
+    { city: 'Marseille', country: 'France', flag: '🇫🇷' },
+    { city: 'Nice', country: 'France', flag: '🇫🇷' },
+    { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
+    { city: 'Munich', country: 'Germany', flag: '🇩🇪' },
+    { city: 'Hamburg', country: 'Germany', flag: '🇩🇪' },
+    { city: 'Frankfurt', country: 'Germany', flag: '🇩🇪' },
+    { city: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱' },
+    { city: 'Rotterdam', country: 'Netherlands', flag: '🇳🇱' },
+    { city: 'Rome', country: 'Italy', flag: '🇮🇹' },
+    { city: 'Venice', country: 'Italy', flag: '🇮🇹' },
+    { city: 'Florence', country: 'Italy', flag: '🇮🇹' },
+    { city: 'Milan', country: 'Italy', flag: '🇮🇹' },
+    { city: 'Naples', country: 'Italy', flag: '🇮🇹' },
+    { city: 'Barcelona', country: 'Spain', flag: '🇪🇸' },
+    { city: 'Madrid', country: 'Spain', flag: '🇪🇸' },
+    { city: 'Seville', country: 'Spain', flag: '🇪🇸' },
+    { city: 'Valencia', country: 'Spain', flag: '🇪🇸' },
+    { city: 'Lisbon', country: 'Portugal', flag: '🇵🇹' },
+    { city: 'Porto', country: 'Portugal', flag: '🇵🇹' },
+    { city: 'Vienna', country: 'Austria', flag: '🇦🇹' },
+    { city: 'Salzburg', country: 'Austria', flag: '🇦🇹' },
+    { city: 'Prague', country: 'Czech Republic', flag: '🇨🇿' },
+    { city: 'Budapest', country: 'Hungary', flag: '🇭🇺' },
+    { city: 'Warsaw', country: 'Poland', flag: '🇵🇱' },
+    { city: 'Krakow', country: 'Poland', flag: '🇵🇱' },
+    { city: 'Stockholm', country: 'Sweden', flag: '🇸🇪' },
+    { city: 'Copenhagen', country: 'Denmark', flag: '🇩🇰' },
+    { city: 'Oslo', country: 'Norway', flag: '🇳🇴' },
+    { city: 'Helsinki', country: 'Finland', flag: '🇫🇮' },
+    { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
+    { city: 'Santorini', country: 'Greece', flag: '🇬🇷' },
+    { city: 'Dublin', country: 'Ireland', flag: '🇮🇪' },
+    { city: 'Brussels', country: 'Belgium', flag: '🇧🇪' },
+    { city: 'Bruges', country: 'Belgium', flag: '🇧🇪' },
+    { city: 'Zurich', country: 'Switzerland', flag: '🇨🇭' },
+    { city: 'Geneva', country: 'Switzerland', flag: '🇨🇭' },
+    { city: 'Moscow', country: 'Russia', flag: '🇷🇺' },
+    { city: 'St Petersburg', country: 'Russia', flag: '🇷🇺' },
+
+    // North America
+    { city: 'New York', country: 'USA', flag: '🇺🇸' },
+    { city: 'Los Angeles', country: 'USA', flag: '🇺🇸' },
+    { city: 'San Francisco', country: 'USA', flag: '🇺🇸' },
+    { city: 'Chicago', country: 'USA', flag: '🇺🇸' },
+    { city: 'Miami', country: 'USA', flag: '🇺🇸' },
+    { city: 'Boston', country: 'USA', flag: '🇺🇸' },
+    { city: 'Seattle', country: 'USA', flag: '🇺🇸' },
+    { city: 'Washington DC', country: 'USA', flag: '🇺🇸' },
+    { city: 'Las Vegas', country: 'USA', flag: '🇺🇸' },
+    { city: 'New Orleans', country: 'USA', flag: '🇺🇸' },
+    { city: 'Austin', country: 'USA', flag: '🇺🇸' },
+    { city: 'Denver', country: 'USA', flag: '🇺🇸' },
+    { city: 'Portland', country: 'USA', flag: '🇺🇸' },
+    { city: 'Nashville', country: 'USA', flag: '🇺🇸' },
+    { city: 'Toronto', country: 'Canada', flag: '🇨🇦' },
+    { city: 'Vancouver', country: 'Canada', flag: '🇨🇦' },
+    { city: 'Montreal', country: 'Canada', flag: '🇨🇦' },
+    { city: 'Mexico City', country: 'Mexico', flag: '🇲🇽' },
+    { city: 'Cancun', country: 'Mexico', flag: '🇲🇽' },
+    { city: 'Havana', country: 'Cuba', flag: '🇨🇺' },
+
+    // South America
+    { city: 'Rio de Janeiro', country: 'Brazil', flag: '🇧🇷' },
+    { city: 'Sao Paulo', country: 'Brazil', flag: '🇧🇷' },
+    { city: 'Buenos Aires', country: 'Argentina', flag: '🇦🇷' },
+    { city: 'Lima', country: 'Peru', flag: '🇵🇪' },
+    { city: 'Cusco', country: 'Peru', flag: '🇵🇪' },
+    { city: 'Bogota', country: 'Colombia', flag: '🇨🇴' },
+    { city: 'Cartagena', country: 'Colombia', flag: '🇨🇴' },
+    { city: 'Santiago', country: 'Chile', flag: '🇨🇱' },
+    { city: 'Montevideo', country: 'Uruguay', flag: '🇺🇾' },
+
+    // Oceania
+    { city: 'Sydney', country: 'Australia', flag: '🇦🇺' },
+    { city: 'Melbourne', country: 'Australia', flag: '🇦🇺' },
+    { city: 'Brisbane', country: 'Australia', flag: '🇦🇺' },
+    { city: 'Perth', country: 'Australia', flag: '🇦🇺' },
+    { city: 'Auckland', country: 'New Zealand', flag: '🇳🇿' },
+    { city: 'Wellington', country: 'New Zealand', flag: '🇳🇿' },
+
+    // Africa
+    { city: 'Cairo', country: 'Egypt', flag: '🇪🇬' },
+    { city: 'Cape Town', country: 'South Africa', flag: '🇿🇦' },
+    { city: 'Johannesburg', country: 'South Africa', flag: '🇿🇦' },
+    { city: 'Marrakech', country: 'Morocco', flag: '🇲🇦' },
+    { city: 'Casablanca', country: 'Morocco', flag: '🇲🇦' },
+    { city: 'Nairobi', country: 'Kenya', flag: '🇰🇪' },
+    { city: 'Lagos', country: 'Nigeria', flag: '🇳🇬' },
+    { city: 'Accra', country: 'Ghana', flag: '🇬🇭' },
+    { city: 'Tunis', country: 'Tunisia', flag: '🇹🇳' },
+];
+
 // Application State
 const state = {
     themes: [],
     selectedTheme: 'feature_based',
     currentJob: null,
-    eventSourceCleanup: null
+    eventSourceCleanup: null,
+    autocompleteIndex: -1
 };
 
 // DOM Elements
@@ -19,6 +149,8 @@ const elements = {
     formPanel: document.getElementById('form-panel'),
     city: document.getElementById('city'),
     country: document.getElementById('country'),
+    cityDropdown: document.getElementById('city-dropdown'),
+    countryDropdown: document.getElementById('country-dropdown'),
     distance: document.getElementById('distance'),
     distanceValue: document.getElementById('distance-value'),
     themeSelector: document.getElementById('theme-selector'),
@@ -130,9 +262,27 @@ function setupEventListeners() {
         btn.addEventListener('click', handleQuickSelect);
     });
 
-    // City/Country input for live preview
-    elements.city.addEventListener('input', updateMockupPreview);
+    // City/Country input for live preview and autocomplete
+    elements.city.addEventListener('input', (e) => {
+        updateMockupPreview();
+        handleCityAutocomplete(e.target.value);
+    });
     elements.country.addEventListener('input', updateMockupPreview);
+
+    // Autocomplete keyboard navigation
+    elements.city.addEventListener('keydown', handleAutocompleteKeydown);
+
+    // Close autocomplete when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            closeAutocomplete();
+        }
+    });
+
+    // Close on focus out (with delay to allow click)
+    elements.city.addEventListener('blur', () => {
+        setTimeout(closeAutocomplete, 150);
+    });
 
     // Form submission
     elements.generateBtn.addEventListener('click', handleGenerate);
@@ -254,6 +404,146 @@ function adjustColor(hex, amount) {
     let b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
 
     return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1);
+}
+
+/**
+ * Handle city autocomplete input
+ */
+function handleCityAutocomplete(query) {
+    const trimmed = query.trim().toLowerCase();
+
+    // Hide dropdown if query is too short
+    if (trimmed.length < 1) {
+        closeAutocomplete();
+        return;
+    }
+
+    // Filter cities that match the query
+    const matches = CITIES_DATABASE.filter(item => {
+        const cityMatch = item.city.toLowerCase().includes(trimmed);
+        const countryMatch = item.country.toLowerCase().includes(trimmed);
+        return cityMatch || countryMatch;
+    }).slice(0, 8); // Limit to 8 results
+
+    if (matches.length === 0) {
+        elements.cityDropdown.innerHTML = `
+            <div class="autocomplete-empty">
+                No matching cities found. You can still type any city name.
+            </div>
+        `;
+        elements.cityDropdown.classList.add('active');
+        return;
+    }
+
+    // Render autocomplete items
+    elements.cityDropdown.innerHTML = matches.map((item, index) => {
+        const highlightedCity = highlightMatch(item.city, trimmed);
+        return `
+            <div class="autocomplete-item" data-index="${index}" data-city="${item.city}" data-country="${item.country}">
+                <span class="flag">${item.flag}</span>
+                <span class="city-name">${highlightedCity}</span>
+                <span class="country-name">${item.country}</span>
+            </div>
+        `;
+    }).join('');
+
+    // Add click handlers to items
+    elements.cityDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => selectAutocompleteItem(item));
+    });
+
+    state.autocompleteIndex = -1;
+    elements.cityDropdown.classList.add('active');
+}
+
+/**
+ * Highlight matching text in autocomplete results
+ */
+function highlightMatch(text, query) {
+    const lowerText = text.toLowerCase();
+    const index = lowerText.indexOf(query);
+
+    if (index === -1) return text;
+
+    const before = text.slice(0, index);
+    const match = text.slice(index, index + query.length);
+    const after = text.slice(index + query.length);
+
+    return `${before}<span class="autocomplete-highlight">${match}</span>${after}`;
+}
+
+/**
+ * Handle keyboard navigation in autocomplete
+ */
+function handleAutocompleteKeydown(e) {
+    const items = elements.cityDropdown.querySelectorAll('.autocomplete-item');
+    if (!items.length || !elements.cityDropdown.classList.contains('active')) {
+        return;
+    }
+
+    switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            state.autocompleteIndex = Math.min(state.autocompleteIndex + 1, items.length - 1);
+            updateAutocompleteSelection(items);
+            break;
+
+        case 'ArrowUp':
+            e.preventDefault();
+            state.autocompleteIndex = Math.max(state.autocompleteIndex - 1, 0);
+            updateAutocompleteSelection(items);
+            break;
+
+        case 'Enter':
+            if (state.autocompleteIndex >= 0 && items[state.autocompleteIndex]) {
+                e.preventDefault();
+                selectAutocompleteItem(items[state.autocompleteIndex]);
+            }
+            break;
+
+        case 'Escape':
+            closeAutocomplete();
+            break;
+    }
+}
+
+/**
+ * Update visual selection in autocomplete
+ */
+function updateAutocompleteSelection(items) {
+    items.forEach((item, i) => {
+        item.classList.toggle('selected', i === state.autocompleteIndex);
+    });
+
+    // Scroll selected item into view
+    if (state.autocompleteIndex >= 0 && items[state.autocompleteIndex]) {
+        items[state.autocompleteIndex].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+/**
+ * Select an item from autocomplete
+ */
+function selectAutocompleteItem(item) {
+    const city = item.dataset.city;
+    const country = item.dataset.country;
+
+    elements.city.value = city;
+    elements.country.value = country;
+
+    updateMockupPreview();
+    closeAutocomplete();
+
+    // Focus the country field briefly, then move to distance
+    elements.country.focus();
+}
+
+/**
+ * Close autocomplete dropdown
+ */
+function closeAutocomplete() {
+    elements.cityDropdown.classList.remove('active');
+    state.autocompleteIndex = -1;
 }
 
 /**

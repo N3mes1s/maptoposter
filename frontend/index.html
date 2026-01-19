@@ -41,13 +41,15 @@
                             <span>Location</span>
                         </div>
                         <div class="input-row">
-                            <div class="input-group">
+                            <div class="input-group autocomplete-wrapper">
                                 <label for="city">City</label>
-                                <input type="text" id="city" placeholder="e.g., Tokyo" required autocomplete="off">
+                                <input type="text" id="city" placeholder="Start typing a city..." required autocomplete="off">
+                                <div class="autocomplete-dropdown" id="city-dropdown"></div>
                             </div>
-                            <div class="input-group">
+                            <div class="input-group autocomplete-wrapper">
                                 <label for="country">Country</label>
                                 <input type="text" id="country" placeholder="e.g., Japan" required autocomplete="off">
+                                <div class="autocomplete-dropdown" id="country-dropdown"></div>
                             </div>
                         </div>
 
