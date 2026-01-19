@@ -18,6 +18,8 @@ pub struct Canvas {
     /// Coordinate transform parameters
     geo_center: (f64, f64),  // (lat, lon)
     geo_scale: f64,
+    /// Latitude correction factor for proper projection (cos of center latitude)
+    lat_correction: f64,
 }
 
 impl Canvas {
@@ -32,6 +34,7 @@ impl Canvas {
             height,
             geo_center: (0.0, 0.0),
             geo_scale: 1.0,
+            lat_correction: 1.0,
         })
     }
 
@@ -69,14 +72,23 @@ impl Canvas {
         let center_lat = (min_lat + max_lat) / 2.0;
         let center_lon = (min_lon + max_lon) / 2.0;
 
+        // Calculate latitude correction factor (Mercator-like projection)
+        // At higher latitudes, longitude degrees cover less distance
+        // cos(lat) gives the correction factor
+        let lat_correction = center_lat.to_radians().cos();
+
+        // Adjust longitude range for the latitude
+        let adjusted_lon_range = lon_range * lat_correction;
+
         // Calculate scale to fit the poster while maintaining aspect ratio
-        let scale_x = self.width as f64 / lon_range;
+        let scale_x = self.width as f64 / adjusted_lon_range;
         let scale_y = self.height as f64 / lat_range;
         let scale = scale_x.min(scale_y);
 
         // Store transform parameters
         self.geo_center = (center_lat, center_lon);
         self.geo_scale = scale;
+        self.lat_correction = lat_correction;
     }
 
     /// Convert geographic coordinates to screen coordinates
@@ -84,7 +96,8 @@ impl Canvas {
         let (center_lat, center_lon) = self.geo_center;
 
         // Convert lon to x (lon increases = x increases)
-        let x = (lon - center_lon) * self.geo_scale + (self.width as f64 / 2.0);
+        // Apply latitude correction to account for convergence of meridians
+        let x = (lon - center_lon) * self.lat_correction * self.geo_scale + (self.width as f64 / 2.0);
 
         // Convert lat to y (lat increases = y decreases, since screen y goes down)
         let y = (center_lat - lat) * self.geo_scale + (self.height as f64 / 2.0);
