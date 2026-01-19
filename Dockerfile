@@ -1,7 +1,5 @@
-# MapToPoster Online Generator
-# Multi-stage Dockerfile using UV for fast dependency management
-
-FROM python:3.11-slim AS base
+# MapToPoster API - Production Dockerfile
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -10,39 +8,29 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libgeos-dev \
     libproj-dev \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Install UV
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Copy requirements first for better caching
+COPY requirements.txt .
 
-# Copy dependency files first for better caching
-COPY pyproject.toml uv.lock ./
-
-# Install dependencies using UV (no venv needed in container)
-RUN uv sync --frozen --no-dev --no-install-project
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Don't install project as package - keep src.maptoposter imports working
-# uv run will add the project root to PYTHONPATH automatically
-
-# Create directories
+# Create necessary directories
 RUN mkdir -p /app/static /app/posters
 
-# API server stage (fixed port 8000)
-FROM base AS api
-EXPOSE 8000
-CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set PYTHONPATH for src.maptoposter imports
+ENV PYTHONPATH=/app
 
-# Development stage with hot reload
-FROM base AS dev
-RUN uv sync --frozen
-CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-
-# Production stage (DEFAULT for cloud deployments like Railway)
-# Uses PORT env var - Railway/Render/etc set this automatically
-FROM base AS production
+# Default port (Railway overrides via $PORT)
 ENV PORT=8000
+
 EXPOSE ${PORT}
-CMD uv run uvicorn api.main:app --host 0.0.0.0 --port ${PORT}
+
+# Use shell form to allow $PORT expansion
+CMD python -m uvicorn api.main:app --host 0.0.0.0 --port $PORT
