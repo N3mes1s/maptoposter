@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapToPoster - City Map Poster Generator</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>MAPTOPOSTER</h1>
+            <p class="subtitle">Generate beautiful minimalist city map posters</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Generator Form -->
+            <section class="form-section" id="generator-form">
+                <!-- Location Inputs -->
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city" placeholder="e.g., Tokyo" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="country">Country</label>
+                        <input type="text" id="country" placeholder="e.g., Japan" required>
+                    </div>
+                </div>
+
+                <!-- Distance Slider -->
+                <div class="input-group">
+                    <label for="distance">
+                        Map Size: <span id="distance-value">15km</span>
+                    </label>
+                    <input type="range" id="distance"
+                           min="2000" max="50000" value="15000" step="1000">
+                    <div class="distance-hints">
+                        <span>Small / Dense</span>
+                        <span>Large Metro</span>
+                    </div>
+                </div>
+
+                <!-- Theme Selector -->
+                <div class="input-group theme-section">
+                    <label>Select Theme</label>
+                    <div class="theme-grid" id="theme-selector">
+                        <div class="loading-themes">Loading themes...</div>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <button type="submit" class="generate-btn" id="generate-btn">
+                    Generate Poster
+                </button>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="progress-section" id="progress-section" hidden>
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span class="progress-step" id="progress-step">Starting...</span>
+                        <span class="progress-percent" id="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p class="progress-message" id="progress-message">Initializing...</p>
+                </div>
+            </section>
+
+            <!-- Preview Section -->
+            <section class="preview-section" id="preview-section" hidden>
+                <div class="preview-header">
+                    <h2>Your Poster is Ready!</h2>
+                </div>
+                <div class="poster-preview">
+                    <img id="poster-image" alt="Generated poster">
+                </div>
+                <div class="preview-actions">
+                    <button class="download-btn" id="download-btn">
+                        Download PNG
+                    </button>
+                    <button class="new-btn" id="new-btn">
+                        Create Another
+                    </button>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section class="error-section" id="error-section" hidden>
+                <div class="error-container">
+                    <h2>Oops! Something went wrong</h2>
+                    <p id="error-message"></p>
+                    <button class="new-btn" id="retry-btn">Try Again</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Map data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors</p>
+        </footer>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+</body>
+</html>
