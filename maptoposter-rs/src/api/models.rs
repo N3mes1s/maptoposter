@@ -137,7 +137,8 @@ pub struct ReadinessChecks {
 pub struct ProgressUpdate {
     pub job_id: String,
     pub status: JobStatus,
-    pub progress: f32,
+    /// Progress as percentage (0-100) - frontend expects "percent" field
+    pub percent: u32,
     pub step: String,
     pub message: String,
 }

@@ -14,7 +14,8 @@ use crate::themes::loader::{load_theme, load_themes};
 pub async fn list_themes(State(state): State<Arc<AppState>>) -> Json<ThemeListResponse> {
     let themes_map = load_themes(&state.config.themes_dir);
 
-    let themes: Vec<ThemeInfo> = themes_map
+    // Collect and sort themes by name for consistent ordering
+    let mut themes: Vec<ThemeInfo> = themes_map
         .into_iter()
         .map(|(name, theme)| ThemeInfo {
             id: name.clone(),
@@ -30,6 +31,9 @@ pub async fn list_themes(State(state): State<Arc<AppState>>) -> Json<ThemeListRe
             road_default: theme.get("road_default").and_then(|v| v.as_str()).map(String::from),
         })
         .collect();
+
+    // Sort alphabetically by id for consistent UI ordering
+    themes.sort_by(|a, b| a.id.cmp(&b.id));
 
     let count = themes.len();
     Json(ThemeListResponse { themes, count })

@@ -40,7 +40,7 @@ pub async fn stream_progress(
                     let update = ProgressUpdate {
                         job_id: job.id.to_string(),
                         status: job.status,
-                        progress: job.progress,
+                        percent: (job.progress * 100.0) as u32,
                         step: job.current_step.unwrap_or_default(),
                         message: job.message.unwrap_or_default(),
                     };
