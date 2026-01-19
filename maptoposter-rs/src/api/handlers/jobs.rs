@@ -37,24 +37,34 @@ pub async fn stream_progress(
 
             match job {
                 Some(job) => {
+                    // Include download_url only when job is completed
+                    let download_url = if job.status == JobStatus::Completed {
+                        Some(format!("/api/posters/{}/download", job.id))
+                    } else {
+                        None
+                    };
+
                     let update = ProgressUpdate {
                         job_id: job.id.to_string(),
                         status: job.status,
                         percent: (job.progress * 100.0) as u32,
                         step: job.current_step.unwrap_or_default(),
                         message: job.message.unwrap_or_default(),
+                        download_url,
                     };
 
                     let data = serde_json::to_string(&update).unwrap_or_default();
 
-                    // Check if job is terminal (completed or failed)
-                    let is_terminal =
-                        job.status == JobStatus::Completed || job.status == JobStatus::Failed;
-
-                    if is_terminal {
-                        // Send final event and signal end
+                    if job.status == JobStatus::Completed {
+                        // Successful completion
                         Event::default().data(data).event("completed")
+                    } else if job.status == JobStatus::Failed {
+                        // Failed job - send error event with error message
+                        let error_msg = job.error.clone().unwrap_or_else(|| "Generation failed".to_string());
+                        let error_data = format!(r#"{{"message": "{}"}}"#, error_msg.replace('"', "\\\""));
+                        Event::default().data(error_data).event("error")
                     } else {
+                        // In progress
                         Event::default().data(data).event("progress")
                     }
                 }

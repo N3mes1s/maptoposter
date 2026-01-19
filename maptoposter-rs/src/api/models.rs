@@ -141,4 +141,7 @@ pub struct ProgressUpdate {
     pub percent: u32,
     pub step: String,
     pub message: String,
+    /// Download URL - included when job is completed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub download_url: Option<String>,
 }
