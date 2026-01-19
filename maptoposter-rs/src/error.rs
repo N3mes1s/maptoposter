@@ -45,6 +45,8 @@ pub enum AppError {
 struct ErrorResponse {
     error: String,
     message: String,
+    /// Alias for message - for FastAPI compatibility (frontend expects 'detail')
+    detail: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     details: Option<serde_json::Value>,
 }
@@ -94,6 +96,7 @@ impl IntoResponse for AppError {
 
         let body = ErrorResponse {
             error: error_type.to_string(),
+            detail: message.clone(),
             message,
             details: None,
         };
