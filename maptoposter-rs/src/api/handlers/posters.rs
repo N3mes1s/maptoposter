@@ -1,13 +1,14 @@
-use std::path::PathBuf;
+use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 
 use axum::{
     body::Body,
     extract::{Path, State},
     http::{header, StatusCode},
-    response::{IntoResponse, Response},
+    response::Response,
     Json,
 };
+use futures::FutureExt;
 use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
@@ -44,10 +45,22 @@ pub async fn create_poster(
     let job = state.create_job(job_request.clone());
     let job_id = job.id;
 
-    // Spawn background task for poster generation
+    // Spawn background task for poster generation with panic handling
     let state_clone = state.clone();
     tokio::spawn(async move {
-        process_poster_job(state_clone, job_id, job_request).await;
+        // Catch panics and mark job as failed
+        let result = AssertUnwindSafe(process_poster_job(
+            state_clone.clone(),
+            job_id,
+            job_request,
+        ))
+        .catch_unwind()
+        .await;
+
+        if result.is_err() {
+            tracing::error!("Job {} panicked during processing", job_id);
+            state_clone.fail_job(job_id, "Internal error: job processing crashed".to_string());
+        }
     });
 
     Ok(Json(PosterCreateResponse {
