@@ -1,0 +1,15 @@
+{
+  "name": "Sage",
+  "description": "Calming sage greens - natural and serene",
+  "bg": "#F5F7F2",
+  "text": "#4A5D4A",
+  "gradient_color": "#F5F7F2",
+  "water": "#D4DED4",
+  "parks": "#C8D9C8",
+  "road_motorway": "#5C7A5C",
+  "road_primary": "#7A9A7A",
+  "road_secondary": "#8FB08F",
+  "road_tertiary": "#A5C2A5",
+  "road_residential": "#BFD4BF",
+  "road_default": "#8FB08F"
+}

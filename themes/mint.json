@@ -1,0 +1,15 @@
+{
+  "name": "Mint",
+  "description": "Fresh mint green - cool and refreshing",
+  "bg": "#F0FFF5",
+  "text": "#2E8B6E",
+  "gradient_color": "#F0FFF5",
+  "water": "#D0F0E0",
+  "parks": "#E0FFE8",
+  "road_motorway": "#3EB489",
+  "road_primary": "#5CC9A0",
+  "road_secondary": "#7ADBB5",
+  "road_tertiary": "#98EBCA",
+  "road_residential": "#B8F5DC",
+  "road_default": "#7ADBB5"
+}

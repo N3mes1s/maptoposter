@@ -1,0 +1,15 @@
+{
+  "name": "Lavender",
+  "description": "Soft purple lavender tones - dreamy and elegant",
+  "bg": "#F8F5FC",
+  "text": "#4A3B5C",
+  "gradient_color": "#F8F5FC",
+  "water": "#E4D9F0",
+  "parks": "#EDE5F5",
+  "road_motorway": "#7B5FA0",
+  "road_primary": "#9678B8",
+  "road_secondary": "#AC94C8",
+  "road_tertiary": "#C2B0D8",
+  "road_residential": "#D8CCE8",
+  "road_default": "#AC94C8"
+}

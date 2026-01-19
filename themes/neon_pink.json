@@ -1,0 +1,15 @@
+{
+  "name": "Neon Pink",
+  "description": "Hot pink neon on dark - bold synthwave aesthetic",
+  "bg": "#1A0A14",
+  "text": "#FF1493",
+  "gradient_color": "#1A0A14",
+  "water": "#2A1424",
+  "parks": "#241020",
+  "road_motorway": "#FF1493",
+  "road_primary": "#FF69B4",
+  "road_secondary": "#DB7093",
+  "road_tertiary": "#C44F82",
+  "road_residential": "#8B3A62",
+  "road_default": "#DB7093"
+}

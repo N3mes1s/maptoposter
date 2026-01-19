@@ -112,6 +112,29 @@ export function getDownloadUrl(jobId) {
 }
 
 /**
+ * Re-render a poster with a different theme (uses cached map data)
+ * @param {string} jobId - The original job ID to re-render
+ * @param {string} theme - The new theme to apply
+ * @returns {Promise<{job_id: string, status: string, estimated_time: number}>}
+ */
+export async function rerenderPoster(jobId, theme) {
+    const response = await fetch(`${API_BASE}/posters/${jobId}/rerender`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ theme })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to re-render poster');
+    }
+
+    return response.json();
+}
+
+/**
  * Search for locations using the Nominatim API
  * @param {string} query - Search query (city name, etc.)
  * @param {number} limit - Maximum results (default 8)

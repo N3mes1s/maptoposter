@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   api:
@@ -8,10 +8,12 @@ services:
     ports:
       - "${PORT:-8000}:8000"
     volumes:
+      # Mount themes and fonts from parent directory
+      - ../themes:/app/themes:ro
+      - ../fonts:/app/fonts:ro
+      - ../frontend:/app/frontend:ro
+      # Mount static for generated posters
       - ./static:/app/static
-      - ./themes:/app/themes:ro
-      - ./fonts:/app/fonts:ro
-      - ./frontend:/app/frontend:ro
     environment:
       - PORT=8000
       - RUST_LOG=${RUST_LOG:-info}
@@ -30,4 +32,4 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 5s

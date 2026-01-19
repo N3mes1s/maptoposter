@@ -1,1 +1,0 @@
-"""MapToPoster API package."""

@@ -1,6 +1,5 @@
-# MapToPoster API - Rust Server (Memory-Efficient)
 # Build stage
-FROM rust:1.83-slim-bookworm AS builder
+FROM rust:1.75-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -10,39 +9,34 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Rust project
-COPY maptoposter-rs/Cargo.toml maptoposter-rs/Cargo.lock ./
-
-# Create dummy source to cache dependencies
+# Create a dummy project to cache dependencies
+COPY Cargo.toml Cargo.lock* ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release && rm -rf src target/release/deps/maptoposter*
 
-# Copy actual source and build
-COPY maptoposter-rs/src ./src
+# Build the actual application
+COPY src ./src
 RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
 FROM debian:bookworm-slim
 
-# Install runtime dependencies (including OpenSSL for native-tls)
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    curl \
-    libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy the binary from builder
-COPY --from=builder /app/target/release/maptoposter-rs ./maptoposter-rs
+# Copy the binary
+COPY --from=builder /app/target/release/maptoposter-rs .
 
-# Copy static assets
-COPY themes ./themes
-COPY fonts ./fonts
-COPY frontend ./frontend
+# Copy static assets (from parent directory)
+# These will be mounted or copied during deployment
+COPY --from=builder /app/target/release/maptoposter-rs .
 
 # Create directories for runtime
-RUN mkdir -p static posters
+RUN mkdir -p static posters themes fonts frontend
 
 # Set environment variables
 ENV PORT=8000
@@ -51,6 +45,8 @@ ENV THEMES_DIR=/app/themes
 ENV FONTS_DIR=/app/fonts
 ENV STATIC_DIR=/app/static
 ENV FRONTEND_DIR=/app/frontend
+
+# Generation limits - prevent OOM on large areas
 ENV MAX_DISTANCE=20000
 ENV MIN_DISTANCE=2000
 ENV DEFAULT_DISTANCE=15000
@@ -62,5 +58,4 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Run the server
 CMD ["./maptoposter-rs"]

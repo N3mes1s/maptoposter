@@ -1,0 +1,15 @@
+{
+  "name": "Mocha",
+  "description": "Rich coffee browns - warm and cozy",
+  "bg": "#2C1810",
+  "text": "#D4A574",
+  "gradient_color": "#2C1810",
+  "water": "#3C2418",
+  "parks": "#382018",
+  "road_motorway": "#D4A574",
+  "road_primary": "#B8956A",
+  "road_secondary": "#9C8260",
+  "road_tertiary": "#806E52",
+  "road_residential": "#645844",
+  "road_default": "#9C8260"
+}

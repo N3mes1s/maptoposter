@@ -1,0 +1,15 @@
+{
+  "name": "Sapphire",
+  "description": "Deep sapphire blue - royal and sophisticated",
+  "bg": "#08101A",
+  "text": "#4169E1",
+  "gradient_color": "#08101A",
+  "water": "#0A1428",
+  "parks": "#0C1830",
+  "road_motorway": "#4169E1",
+  "road_primary": "#3457C9",
+  "road_secondary": "#2844A8",
+  "road_tertiary": "#1E3480",
+  "road_residential": "#142458",
+  "road_default": "#2844A8"
+}

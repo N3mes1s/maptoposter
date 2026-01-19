@@ -1,0 +1,15 @@
+{
+  "name": "Vintage Paper",
+  "description": "Aged paper with ink lines - antique map style",
+  "bg": "#F2E8D5",
+  "text": "#2C1810",
+  "gradient_color": "#F2E8D5",
+  "water": "#D8CAB0",
+  "parks": "#E8DCC4",
+  "road_motorway": "#1A1A1A",
+  "road_primary": "#333333",
+  "road_secondary": "#4D4D4D",
+  "road_tertiary": "#666666",
+  "road_residential": "#808080",
+  "road_default": "#4D4D4D"
+}

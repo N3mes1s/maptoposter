@@ -1,0 +1,15 @@
+{
+  "name": "Coral",
+  "description": "Warm coral pinks - tropical and inviting",
+  "bg": "#FFF5F0",
+  "text": "#C75050",
+  "gradient_color": "#FFF5F0",
+  "water": "#FFE4DC",
+  "parks": "#FFEEE8",
+  "road_motorway": "#FF6F61",
+  "road_primary": "#FF8A7A",
+  "road_secondary": "#FFA090",
+  "road_tertiary": "#FFB5A8",
+  "road_residential": "#FFC8C0",
+  "road_default": "#FFA090"
+}

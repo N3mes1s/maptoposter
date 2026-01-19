@@ -139,6 +139,7 @@ const state = {
     themes: [],
     selectedTheme: 'feature_based',
     currentJob: null,
+    currentJobId: null,  // For theme re-rendering
     eventSourceCleanup: null,
     autocompleteIndex: -1,
     searchDebounceTimer: null,
@@ -170,6 +171,7 @@ const elements = {
     posterImage: document.getElementById('poster-image'),
     previewActions: document.getElementById('preview-actions'),
     downloadBtn: document.getElementById('download-btn'),
+    changeThemeBtn: document.getElementById('change-theme-btn'),
     newBtn: document.getElementById('new-btn'),
 
     // Progress elements
@@ -292,6 +294,9 @@ function setupEventListeners() {
     // New poster button
     elements.newBtn.addEventListener('click', resetToForm);
     elements.retryBtn.addEventListener('click', resetToForm);
+
+    // Change theme button (re-render with different theme)
+    elements.changeThemeBtn.addEventListener('click', handleChangeTheme);
 
     // Enter key navigation
     elements.city.addEventListener('keypress', (e) => {
@@ -669,6 +674,91 @@ async function handleGenerate() {
     } catch (error) {
         handleError({ message: error.message });
     }
+}
+
+/**
+ * Handle theme change for existing poster (re-render)
+ */
+async function handleChangeTheme() {
+    if (!state.currentJob) {
+        showError('No poster to re-render');
+        return;
+    }
+
+    // Scroll to theme selector and highlight it
+    elements.themeSelector.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    elements.themeSelector.classList.add('highlight-for-rerender');
+
+    // Show message to user
+    const originalText = elements.changeThemeBtn.querySelector('span').textContent;
+    elements.changeThemeBtn.querySelector('span').textContent = 'Select a theme...';
+    elements.changeThemeBtn.disabled = true;
+
+    // Add one-time click handler to theme cards for re-render
+    const handleThemeRerender = async (e) => {
+        const card = e.target.closest('.theme-card');
+        if (!card) return;
+
+        const newTheme = card.dataset.theme;
+
+        // Remove the highlight and handler
+        elements.themeSelector.classList.remove('highlight-for-rerender');
+        elements.themeSelector.removeEventListener('click', handleThemeRerender);
+        elements.changeThemeBtn.querySelector('span').textContent = originalText;
+        elements.changeThemeBtn.disabled = false;
+
+        // Skip if same theme
+        if (newTheme === state.selectedTheme) {
+            return;
+        }
+
+        // Update selected theme visual
+        state.selectedTheme = newTheme;
+        document.querySelectorAll('.theme-card').forEach(c => {
+            c.classList.toggle('selected', c.dataset.theme === newTheme);
+        });
+
+        // Show progress for re-render
+        const city = elements.city.value || elements.mockupCity.textContent;
+        const country = elements.country.value || elements.mockupCountry.textContent;
+        showProgress(city, country);
+        elements.progressMessage.textContent = 'Applying new theme...';
+
+        try {
+            // Call re-render API
+            const response = await api.rerenderPoster(state.currentJob, newTheme);
+            state.currentJob = response.job_id;
+
+            // Stream progress
+            state.eventSourceCleanup = api.streamJobProgress(response.job_id, {
+                onProgress: updateProgress,
+                onCompleted: handleCompleted,
+                onError: handleError
+            });
+
+        } catch (error) {
+            handleError({ message: error.message });
+        }
+    };
+
+    elements.themeSelector.addEventListener('click', handleThemeRerender);
+
+    // Cancel on clicking outside or pressing Escape
+    const cancelHandler = (e) => {
+        if (e.key === 'Escape' || (!elements.themeSelector.contains(e.target) && e.type === 'click')) {
+            elements.themeSelector.classList.remove('highlight-for-rerender');
+            elements.themeSelector.removeEventListener('click', handleThemeRerender);
+            document.removeEventListener('keydown', cancelHandler);
+            document.removeEventListener('click', cancelHandler);
+            elements.changeThemeBtn.querySelector('span').textContent = originalText;
+            elements.changeThemeBtn.disabled = false;
+        }
+    };
+
+    setTimeout(() => {
+        document.addEventListener('keydown', cancelHandler);
+        document.addEventListener('click', cancelHandler);
+    }, 100);
 }
 
 /**

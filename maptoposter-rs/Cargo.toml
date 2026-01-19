@@ -1,0 +1,54 @@
+[package]
+name = "maptoposter-rs"
+version = "2.0.0"
+edition = "2021"
+description = "Memory-efficient map poster generator in Rust (Rust rewrite)"
+authors = ["Giuseppe Massaro"]
+license = "MIT"
+# Original Python implementation by Ankur Gupta
+
+[dependencies]
+# Web framework
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "fs", "trace"] }
+tower = "0.4"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# HTTP client
+reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls"] }
+
+# Geometry
+geo = "0.28"
+geo-types = "0.7"
+
+# Rendering
+tiny-skia = "0.11"
+png = "0.17"
+fontdue = "0.9"
+
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+parking_lot = "0.12"
+
+# Async utilities
+tokio-stream = "0.1"
+tokio-util = { version = "0.7", features = ["io"] }
+futures = "0.3"
+
+# URL encoding
+urlencoding = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

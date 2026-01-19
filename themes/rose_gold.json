@@ -1,0 +1,15 @@
+{
+  "name": "Rose Gold",
+  "description": "Elegant rose gold tones on cream - sophisticated and warm",
+  "bg": "#FDF5F0",
+  "text": "#8B6914",
+  "gradient_color": "#FDF5F0",
+  "water": "#F5E6DC",
+  "parks": "#F8EDE3",
+  "road_motorway": "#B76E79",
+  "road_primary": "#C9A075",
+  "road_secondary": "#D4AF91",
+  "road_tertiary": "#DFC4A8",
+  "road_residential": "#E8D5C0",
+  "road_default": "#D4AF91"
+}

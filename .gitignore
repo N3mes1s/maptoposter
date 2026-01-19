@@ -1,14 +1,12 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-.env/
-venv/
-.venv/
-ENV/
+# Rust
+target/
+Cargo.lock
+*.rs.bk
+
+# Node.js (testing tools)
+node_modules/
+package.json
+package-lock.json
 
 # IDE
 .idea/
@@ -18,11 +16,11 @@ ENV/
 
 # Project specific
 cache/*
-posters/*
 static/*
+ui-screenshots/
+ui-analysis.js
 
 # Keep directories but ignore contents
-!posters/.gitkeep
 !static/.gitkeep
 
 # Environment
@@ -32,3 +30,8 @@ static/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
